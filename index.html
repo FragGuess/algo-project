@@ -1,5 +1,4 @@
-
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -15,14 +14,7 @@
 .progress-bar{height:100%;width:0;background:linear-gradient(90deg,#4fe0c6,#7fa7ff);transition:width .22s ease}
 .state-note{margin-top:10px}
 .controls button:disabled,.preset:disabled{opacity:.45;cursor:not-allowed;transform:none;background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.05)}
-.surprise{position:fixed;right:20px;bottom:20px;width:min(320px,calc(100vw - 32px));padding:12px;border-radius:20px;border:1px solid rgba(255,255,255,.14);background:rgba(8,17,28,.96);box-shadow:0 22px 50px rgba(0,0,0,.42);opacity:0;transform:translateY(16px) scale(.96);pointer-events:none;transition:opacity .28s ease,transform .28s ease;z-index:50}
-.surprise.show{opacity:1;transform:translateY(0) scale(1)}
-.surprise img{display:block;width:100%;height:210px;object-fit:cover;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04)}
-.surprise .fallback{display:none;height:210px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:radial-gradient(circle at top,rgba(255,203,107,.24),transparent 50%),linear-gradient(160deg,#18283a,#0b1520);align-items:center;justify-content:center;text-align:center;font:700 42px/1 Georgia,serif;color:#ffcb6b;padding:18px}
-.surprise.fail img{display:none}
-.surprise.fail .fallback{display:flex}
-.surprise .label{margin-top:10px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#ffcb6b}
-.surprise .text{margin-top:6px;color:var(--text);line-height:1.4}
+
 </style>
 </head>
 <body>
@@ -56,12 +48,12 @@
 <section class="card"><div class="head"><h2>Visualization</h2><span class="tiny">Fixed wiring diagram</span></div><div class="body">
 <div class="legend"><span><i class="sw" style="background:#4fe0c6"></i>Active stage</span><span><i class="sw" style="background:#7fa7ff"></i>Completed values</span><span><i class="sw" style="background:#ffcb6b"></i>Ascending comparator</span><span><i class="sw" style="background:#ff7a66"></i>Descending comparator</span></div>
 <div class="svg"><svg id="bitonic-svg" viewBox="0 0 980 460"></svg></div><div id="bitonic-exp" class="exp"></div></div></section>
-<section class="card"><div class="head"><h3>Pseudocode</h3><span class="tiny">Hover lines</span></div><div id="bitonic-code" class="body code"></div></section>
+<section class="card"><div class="head"><h3>Pseudocode</h3><span class="tiny">Hover over lines</span></div><div id="bitonic-code" class="body code"></div></section>
 <div class="edu">
-<section class="card"><div class="head"><h3>Overview</h3><span class="tiny">Always visible</span></div><div class="body"><div class="note"><b>What the algorithm does.</b><br>Bitonic sort is a comparison network. That means the wires and comparators are fixed before the input is known. For n values, the network uses O(n log^2 n) comparators and O(log^2 n) parallel depth.<br><br><b>Why bitonic matters.</b><br>A bitonic sequence first rises then falls, or can be rotated to have that shape. The network repeatedly builds bitonic blocks and then merges them. That is why the stage labels k and j matter: k tells you the block size, and j tells you the compare distance inside the block.<br><br><b>Correctness idea.</b><br>The 0-1 Principle says that if the network sorts every binary input of length n, then it also sorts every numeric input of length n.</div></div></section>
-<section class="card"><div class="head"><h3>Worked Example</h3><span class="tiny">Always visible</span></div><div class="body"><div class="note"><b>Example with 8 values.</b><br>Try the preset <b>worst-case zigzag</b>: 9, 1, 8, 2, 7, 3, 6, 4.<br><br>At the beginning, the network compares short pairs. Later, it compares values across larger blocks. For example, an ascending comparator between 9 and 1 keeps the smaller value 1 on the upper wire and sends 9 downward. A descending comparator does the opposite. Stage by stage, local order becomes bitonic order, then full sorted order.<br><br><b>Why every comparator is useful.</b><br>This zigzag pattern creates inversions at many positions, so the network cannot skip work. That is exactly why a fixed sorting network needs all of its scheduled comparators.</div></div></section>
-<section class="card"><div class="head"><h3>Key Concepts</h3><span class="tiny">Main ideas</span></div><div class="body concepts"><div class="box"><span class="tiny">Data-oblivious</span><strong>Same wiring for every input</strong></div><div class="box"><span class="tiny">0-1 Principle</span><strong>Binary proof implies general proof</strong></div><div class="box"><span class="tiny">Parallel depth</span><strong>One stage runs together</strong></div><div class="box"><span class="tiny">Odd-even merge</span><strong>Fewer comparators, same asymptotic depth</strong></div></div></section>
-<section class="card"><div class="head"><h3>Reference Notes</h3><span class="tiny">Theory anchor</span></div><div class="body"><div class="note"><b>Batcher, 1968.</b><br>Introduced the bitonic sorting network and odd-even merge family.<br><br><b>CLRS, Sorting Networks.</b><br>Main ideas used here: comparison networks, bitonic merge, full bitonic sort, and the 0-1 Principle.<br><br><b>Complexity to mention.</b><br>Comparator count for power-of-two n: n log2(n)(log2(n)+1) / 4. Parallel depth: log2(n)(log2(n)+1) / 2.</div></div></section>
+<section class="card"><div class="head"><h3>Overview</h3><span class="tiny">Always visible</span></div><div class="body"><div class="note"><b>What the algorithm does.</b><br>Bitonic sort is a comparison network. This means the wires and comparators are fixed before the input is known. For n values, the network uses O(n log²n) comparators and O(log²n) parallel depth.<br><br><b>Why bitonic matters.</b><br>A bitonic sequence first rises then falls, or can be rotated to have that shape. The network repeatedly builds bitonic blocks and then merges them. This is why the stage labels k and j matter: k defines the block size, and j defines the comparison distance within the block.<br><br><b>Correctness.</b><br>The 0-1 Principle states that if the network correctly sorts every binary input of length n, then it also correctly sorts every numeric input of length n.</div></div></section>
+<section class="card"><div class="head"><h3>Worked Example</h3><span class="tiny">Always visible</span></div><div class="body"><div class="note"><b>Example with 8 values.</b><br>Try the preset <b>worst-case zigzag</b>: 9, 1, 8, 2, 7, 3, 6, 4.<br><br>At the start, the network compares short pairs. Later, it compares values across larger blocks. For example, an ascending comparator between 9 and 1 keeps the smaller value 1 on the upper wire and sends 9 downward. A descending comparator does the opposite. Stage by stage, local order becomes bitonic order, then fully sorted order.<br><br><b>Why every comparator matters.</b><br>This zigzag pattern creates inversions at many positions, so the network cannot skip any work. This is precisely why a fixed sorting network needs all of its scheduled comparators.</div></div></section>
+<section class="card"><div class="head"><h3>Key Concepts</h3><span class="tiny">Main ideas</span></div><div class="body concepts"><div class="box"><span class="tiny">Data-oblivious</span><strong>Same wiring for every input</strong></div><div class="box"><span class="tiny">0-1 Principle</span><strong>Binary proof implies general proof</strong></div><div class="box"><span class="tiny">Parallel depth</span><strong>All comparators in a stage run in parallel</strong></div><div class="box"><span class="tiny">Odd-even merge</span><strong>Fewer comparators, same asymptotic depth</strong></div></div></section>
+<section class="card"><div class="head"><h3>Reference Notes</h3><span class="tiny">Theory anchor</span></div><div class="body"><div class="note"><b>Batcher, 1968.</b><br>Introduced the bitonic sorting network and odd-even merge family.<br><br><b>CLRS, Sorting Networks.</b><br>Topics covered: comparison networks, bitonic merge, full bitonic sort, and the 0-1 Principle.<br><br><b>Complexity.</b><br>Comparator count for power-of-two n: n·log₂(n)·(log₂(n)+1) / 4. Parallel depth: log₂(n)·(log₂(n)+1) / 2.</div></div></section>
 </div>
 </div>
 </div>
@@ -95,10 +87,10 @@
 <div id="strassen-exp" class="exp"></div></div></section>
 <section class="card"><div class="head"><h3>Pseudocode</h3><span class="tiny">Follow the active line</span></div><div id="strassen-code" class="body code"></div></section>
 <div class="edu">
-<section class="card"><div class="head"><h3>Overview</h3><span class="tiny">Always visible</span></div><div class="body"><div class="note"><b>What changes compared with the naive method.</b><br>The usual block recurrence is T(n)=8T(n/2)+O(n^2). Strassen reduces the number of recursive multiplications from 8 to 7, giving T(n)=7T(n/2)+O(n^2).<br><br><b>Why the page stops at 2x2 leaves.</b><br>That cutoff keeps every multiplication readable while still showing the real Strassen structure: split into quadrants, compute P1 to P7, then recombine C11, C12, C21, C22.<br><br><b>Parallel idea.</b><br>The seven products are independent once the needed sums and differences are prepared, so they can be computed in parallel.</div></div></section>
-<section class="card"><div class="head"><h3>Worked Example</h3><span class="tiny">Always visible</span></div><div class="body"><div class="note"><b>What to point at during the demo.</b><br>Load the 4x4 preset. First, A and B are split into four 2x2 blocks. Then the page builds P1 to P7. For example, P1 = (A11 + A22)(B11 + B22). After the seven products are ready, the result is recombined with:<br><br>C11 = P1 + P4 - P5 + P7<br>C12 = P3 + P5<br>C21 = P2 + P4<br>C22 = P1 - P2 + P3 + P6<br><br>This is the main calculation story the professor usually wants to see clearly.</div></div></section>
-<section class="card"><div class="head"><h3>Key Concepts</h3><span class="tiny">Main ideas</span></div><div class="body concepts"><div class="box"><span class="tiny">7 subproblems</span><strong>P1..P7 are independent</strong></div><div class="box"><span class="tiny">Parallelism</span><strong>Leaves can run together</strong></div><div class="box"><span class="tiny">Crossover</span><strong>Constants matter before asymptotics win</strong></div><div class="box"><span class="tiny">Cutoff</span><strong>Real implementations stop recursion early</strong></div></div></section>
-<section class="card"><div class="head"><h3>Reference Notes</h3><span class="tiny">Theory anchor</span></div><div class="body"><div class="note"><b>Strassen, 1969.</b><br>First fast matrix multiplication algorithm beating the cubic bound.<br><br><b>CLRS references.</b><br>Main ideas used here: block multiplication, divide and conquer, Strassen products, and recurrence comparison with the naive algorithm.<br><br><b>Formula sheet.</b><br>P1..P7 are shown directly in the interface, and the combine step spells out the four quadrant formulas for the final matrix.</div></div></section>
+<section class="card"><div class="head"><h3>Overview</h3><span class="tiny">Always visible</span></div><div class="body"><div class="note"><b>What changes compared to the naive method.</b><br>The standard block recurrence is T(n)=8T(n/2)+O(n²). Strassen reduces the number of recursive multiplications from 8 to 7, giving T(n)=7T(n/2)+O(n²).<br><br><b>Why the page stops at 2×2 leaves.</b><br>This cutoff keeps every multiplication readable while still showing the true Strassen structure: split into quadrants, compute P1 to P7, then recombine C11, C12, C21, C22.<br><br><b>Parallelism.</b><br>The seven products are independent once the required sums and differences are computed, so they can be evaluated in parallel.</div></div></section>
+<section class="card"><div class="head"><h3>Worked Example</h3><span class="tiny">Always visible</span></div><div class="body"><div class="note"><b>What to highlight during the demo.</b><br>Load the 4×4 preset. First, A and B are split into four 2×2 blocks. Then the page computes P1 to P7. For example, P1 = (A11 + A22)(B11 + B22). Once the seven products are ready, the result is recombined as:<br><br>C11 = P1 + P4 - P5 + P7<br>C12 = P3 + P5<br>C21 = P2 + P4<br>C22 = P1 - P2 + P3 + P6<br><br>This gives the professor exact steps to follow during the demo.</div></div></section>
+<section class="card"><div class="head"><h3>Key Concepts</h3><span class="tiny">Main ideas</span></div><div class="body concepts"><div class="box"><span class="tiny">7 subproblems</span><strong>P1..P7 are independent</strong></div><div class="box"><span class="tiny">Parallelism</span><strong>The seven products can run in parallel</strong></div><div class="box"><span class="tiny">Crossover</span><strong>Constants matter before asymptotics win</strong></div><div class="box"><span class="tiny">Cutoff</span><strong>Real implementations stop recursion early</strong></div></div></section>
+<section class="card"><div class="head"><h3>Reference Notes</h3><span class="tiny">Theory anchor</span></div><div class="body"><div class="note"><b>Strassen, 1969.</b><br>The first matrix multiplication algorithm to break the cubic bound.<br><br><b>CLRS references.</b><br>Key concepts used here: block multiplication, divide and conquer, Strassen products, and a recurrence comparison with the naive algorithm.<br><br><b>Formula sheet.</b><br>P1 through P7 are shown directly in the interface, and the combine step spells out the four quadrant formulas for the final matrix.</div></div></section>
 </div>
 </div>
 </div>
@@ -127,20 +119,15 @@
 <div class="edu">
 <section class="card"><div class="head"><h3>Overview</h3><span class="tiny">Always visible</span></div><div class="body"><div class="note"><b>Key generation.</b><br>Choose two primes p and q. Compute n = pq and phi(n) = (p - 1)(q - 1). Choose e such that gcd(e, phi(n)) = 1. Then compute d = e^-1 mod phi(n) using the Extended Euclidean Algorithm.<br><br><b>Use of the keys.</b><br>Public key: (n, e). Private key: d. Encryption is c = m^e mod n. Decryption is m = c^d mod n.<br><br><b>Why it works.</b><br>RSA relies on modular arithmetic and the fact that recovering phi(n) is easy if p and q are known, but hard if n is large and unfactored.</div></div></section>
 <section class="card"><div class="head"><h3>Worked Example</h3><span class="tiny">Always visible</span></div><div class="body"><div class="note"><b>Concrete classroom example.</b><br>Take p = 17, q = 11, and e = 7.<br><br>n = 17 x 11 = 187<br>phi(n) = (17 - 1)(11 - 1) = 16 x 10 = 160<br>d = 23 because 7 x 23 = 161 and 161 mod 160 = 1<br><br>If the message is m = 88, the page computes c = 88^7 mod 187 = 11, then decrypts 11^23 mod 187 back to 88.<br><br>This gives the professor exact numbers to follow during the demo.</div></div></section>
-<section class="card"><div class="head"><h3>Key Concepts</h3><span class="tiny">Main ideas</span></div><div class="body concepts"><div class="box"><span class="tiny">Key generation</span><strong>Need primes and coprime e</strong></div><div class="box"><span class="tiny">Extended Euclid</span><strong>Computes d=e^-1 mod phi(n)</strong></div><div class="box"><span class="tiny">Square-and-multiply</span><strong>Fast modular exponentiation</strong></div><div class="box"><span class="tiny">Security idea</span><strong>Factoring n reveals phi(n)</strong></div></div></section>
-<section class="card"><div class="head"><h3>Reference Notes</h3><span class="tiny">Theory anchor</span></div><div class="body"><div class="note"><b>Rivest, Shamir, Adleman, 1978.</b><br>Original RSA cryptosystem publication in <i>Communications of the ACM</i>.<br><br><b>CLRS, Number Theory chapter.</b><br>Main ideas used here: modular arithmetic, gcd, Extended Euclid, modular inverse, and modular exponentiation.<br><br><b>Security message to mention.</b><br>If an attacker factors n into p and q, they can recompute phi(n) and then recover d. That is the break shown in the last phase.</div></div></section>
+<section class="card"><div class="head"><h3>Key Concepts</h3><span class="tiny">Main ideas</span></div><div class="body concepts"><div class="box"><span class="tiny">Key generation</span><strong>Requires two primes and a coprime e</strong></div><div class="box"><span class="tiny">Extended Euclid</span><strong>Computes d = e⁻¹ mod phi(n)</strong></div><div class="box"><span class="tiny">Square-and-multiply</span><strong>Fast modular exponentiation</strong></div><div class="box"><span class="tiny">Security basis</span><strong>Factoring n reveals phi(n)</strong></div></div></section>
+<section class="card"><div class="head"><h3>Reference Notes</h3><span class="tiny">Theory anchor</span></div><div class="body"><div class="note"><b>Rivest, Shamir, Adleman, 1978.</b><br>Original RSA cryptosystem publication in <i>Communications of the ACM</i>.<br><br><b>CLRS, Number Theory chapter.</b><br>Key concepts used here: modular arithmetic, gcd, Extended Euclid, modular inverse, and modular exponentiation.<br><br><b>Security note.</b><br>If an attacker factors n into p and q, they can recompute phi(n) and then recover d. This is the attack demonstrated in the final phase.</div></div></section>
 </div>
 </div>
 </div>
 </section>
 <footer>HTML, CSS, vanilla JavaScript, and SVG only.</footer>
 </div>
-<div id="surprise-card" class="surprise" aria-hidden="true">
-<img id="surprise-image" src="https://www.shutterstock.com/image-photo/young-attractive-gay-couple-kissing-260nw-2662530617.jpg" alt="Secret build surprise" referrerpolicy="no-referrer">
-<div class="fallback">Build #3</div>
-<div id="surprise-label" class="label">Secret build unlocked</div>
-<div id="surprise-text" class="text">Third click reached. The algorithm still works, but the demo has clearly gone off-script.</div>
-</div>
+
 <script>
 const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v)),gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b]}return a},pow2=n=>n>0&&(n&(n-1))===0,isPrime=n=>{if(n<2)return false;for(let d=2;d*d<=n;d++)if(n%d===0)return false;return true},fmt=v=>Number.isInteger(v)?String(v):(+v).toFixed(2).replace(/\.00$/,"");
@@ -151,13 +138,6 @@ const strassenPresets={c2:{a:"1 3\n7 5",b:"6 8\n4 2"},b4:{a:"1 2 3 4\n5 6 7 8\n2
 const rsaPresets={c:{p:17,q:11,e:7,m:88},b:{p:13,q:19,e:5,m:42},g:{p:29,q:31,e:11,m:123}};
 const PDEF=[["P1","(A11+A22)(B11+B22)",2,"#4fe0c6"],["P2","(A21+A22)B11",3,"#7fa7ff"],["P3","A11(B12-B22)",4,"#ffcb6b"],["P4","A22(B21-B11)",5,"#ff7a66"],["P5","(A11+A12)B22",6,"#bb8cff"],["P6","(A21-A11)(B11+B12)",7,"#7ef4a7"],["P7","(A12-A22)(B21+B22)",8,"#ff99c1"]];
 const modules={};
-const buildSurpriseImages=[
-"https://www.shutterstock.com/image-photo/young-attractive-gay-couple-kissing-260nw-2662530617.jpg",
-"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQle0C-HHeSuGQ_GT1POitXfTiQAb9-Dew_4Q&s",
-"https://images.epagine.fr/545/9783384352545_1_75.jpg"
-];
-const resetSurpriseImage="https://pbs.twimg.com/media/GsTgd4aW0AAs8Tn.jpg";
-const surprise={clicks:0,timer:null,card:$("surprise-card"),img:$("surprise-image"),label:$("surprise-label"),text:$("surprise-text")};
 const parseNums=s=>{const a=s.split(/[\s,]+/).filter(Boolean).map(Number);if(!a.length||a.some(Number.isNaN))throw Error("Enter numbers separated by commas or spaces.");return a};
 const parseMatrix=s=>{const r=s.trim().replace(/;/g,"\n").split(/\n+/).map(x=>x.trim()).filter(Boolean).map(x=>x.split(/[\s,]+/).map(Number));if(!r.length||r.some(row=>row.some(Number.isNaN)))throw Error("Enter numeric matrix rows.");const n=r.length;if(!r.every(row=>row.length===n))throw Error("Matrices must be square.");if(![2,4].includes(n))throw Error("Use 2x2 or 4x4 matrices.");return r};
 const add=(A,B)=>A.map((r,i)=>r.map((v,j)=>v+B[i][j])),
@@ -173,29 +153,7 @@ matrixCellsHTML=(A,B,M)=>{if(!A||!B||!M)return"";const lines=[];for(let i=0;i<M.
 combineHTML=(terms,result)=>`${terms.map((x,i)=>`${i?` ${x.sign} `:""}${codeMatrix(x.M)}`).join("")}<br>= ${codeMatrix(result)}`;
 function code(el,lines){el.innerHTML=lines.map((x,i)=>`<div class="line" data-line="${i+1}" title="${esc(x[1])}"><b>${i+1}</b><code>${esc(x[0])}</code></div>`).join("")}
 function hi(el,lines){const a=Array.isArray(lines)?lines:[lines];el.querySelectorAll(".line").forEach(n=>n.classList.toggle("active",a.includes(+n.dataset.line)))}
-function rand(list){return list[Math.floor(Math.random()*list.length)]}
-function showSurprise(src,label,text){
-clearTimeout(surprise.timer);
-surprise.card.classList.remove("fail");
-surprise.img.src=src;
-surprise.img.alt=label;
-surprise.label.textContent=label;
-surprise.text.textContent=text;
-surprise.card.classList.add("show");
-surprise.card.setAttribute("aria-hidden","false");
-surprise.timer=setTimeout(()=>{surprise.card.classList.remove("show");surprise.card.setAttribute("aria-hidden","true")},3600)
-}
-function countBuildClick(){
-surprise.clicks++;
-if(surprise.clicks%3===0){
-showSurprise(rand(buildSurpriseImages),"Build surprise",`Build click ${surprise.clicks}. The demo is still running, but clearly not under academic control anymore.`);
-}
-}
-if(surprise.img){
-surprise.img.onerror=()=>surprise.card.classList.add("fail");
-surprise.img.onload=()=>surprise.card.classList.remove("fail");
-}
-function init(m){modules[m.key]={...m,steps:[],i:0,status:"Idle",timer:null,speed:1,error:"",extra:{}};code(m.dom.code,m.pseudo);m.dom.history.onclick=e=>{const tr=e.target.closest("tr[data-i]");if(!tr)return;jump(m.key,+tr.dataset.i)};m.dom.speed.oninput=()=>{modules[m.key].speed=+m.dom.speed.value;m.dom.speedValue.textContent=modules[m.key].speed.toFixed(2)+"x";if(modules[m.key].status==="Playing")play(m.key)};m.dom.build.onclick=()=>{countBuildClick();build(m.key)};m.dom.step.onclick=()=>step(m.key);m.dom.play.onclick=()=>play(m.key);m.dom.pause.onclick=()=>pause(m.key,"Paused");m.dom.reset.onclick=()=>{showSurprise(resetSurpriseImage,"Reset surprise","Reset pressed. All evidence has been politely cleared.");reset(m.key)}}
+function init(m){modules[m.key]={...m,steps:[],i:0,status:"Idle",timer:null,speed:1,error:"",extra:{}};code(m.dom.code,m.pseudo);m.dom.history.onclick=e=>{const tr=e.target.closest("tr[data-i]");if(!tr)return;jump(m.key,+tr.dataset.i)};m.dom.speed.oninput=()=>{modules[m.key].speed=+m.dom.speed.value;m.dom.speedValue.textContent=modules[m.key].speed.toFixed(2)+"x";if(modules[m.key].status==="Playing")play(m.key)};m.dom.build.onclick=()=>{build(m.key)};m.dom.step.onclick=()=>step(m.key);m.dom.play.onclick=()=>play(m.key);m.dom.pause.onclick=()=>pause(m.key,"Paused");m.dom.reset.onclick=()=>{reset(m.key)}}
 function stop(m){if(m.timer){clearInterval(m.timer);m.timer=null}}
 function build(k){const m=modules[k];stop(m);try{const out=m.make();m.steps=out.steps;m.extra=out.extra||{};m.i=0;m.status="Ready";m.error=""}catch(e){m.steps=[];m.i=0;m.extra={};m.status="Idle";m.error=e.message}render(k)}
 function step(k){const m=modules[k];if(!m.steps.length){build(k);return}if(m.i<m.steps.length-1){m.i++;m.status=m.i===m.steps.length-1?"Done":"Paused"}render(k)}
@@ -210,17 +168,17 @@ function stages(n){const out=[];for(let k=2;k<=n;k*=2)for(let j=k/2;j>=1;j/=2){c
 function bc(n){const m=Math.log2(n);return{comp:n*m*(m+1)/4,depth:m*(m+1)/2,odd:n*m*(m-1)/4+n-1}}
 function makeBitonic(){
 const arr=parseNums($("bitonic-input").value);
-if(!pow2(arr.length)||arr.length<2||arr.length>16)throw Error("Bitonic input length must be a power of two between 2 and 16.");
+if(!pow2(arr.length)||arr.length<2||arr.length>16)throw Error("Input length must be a power of two between 2 and 16.");
 const sg=stages(arr.length),snap=[arr.slice()],steps=[];
 let cur=arr.slice(),cmp=0,sw=0;
 const c=bc(arr.length);
-steps.push({t:"Initial load",h:"Initial",v:arr.join(", "),l:1,s:{cmp,sw,stage:0,total:sg.length,n:arr.length,c},e:`<b>The network is fixed before the input arrives.</b><br>Input values: <code>${esc(arr.join(", "))}</code><br>For n=${arr.length}, this instance schedules ${fmt(c.comp)} comparators across ${fmt(c.depth)} parallel stages. Every input of length ${arr.length} follows that same wiring.`,a:-1});
+steps.push({t:"Initial load",h:"Initial",v:arr.join(", "),l:1,s:{cmp,sw,stage:0,total:sg.length,n:arr.length,c},e:`<b>The network is fixed before the input arrives.</b><br>Input values: <code>${esc(arr.join(", "))}</code><br>For n=${arr.length}, this network schedules ${fmt(c.comp)} comparators across ${fmt(c.depth)} parallel stages. Every input of length ${arr.length} follows the same fixed wiring.`,a:-1});
 sg.forEach((st,idx)=>{
 const before=cur.slice(),items=[];
 st.c.forEach(x=>{const L=cur[x.a],R=cur[x.b],swap=x.up?L>R:L<R;if(swap)[cur[x.a],cur[x.b]]=[cur[x.b],cur[x.a]],sw++;cmp++;items.push({...x,L,R,swap})});
 const stageSwaps=items.filter(x=>x.swap).length;
 snap.push(cur.slice());
-steps.push({t:`Stage ${idx+1}`,h:`Stage ${idx+1}`,v:`k=${st.k}, j=${st.j}, ${st.c.length} comps`,l:[1,2,3,4,5,6,7],s:{cmp,sw,stage:idx+1,total:sg.length,n:arr.length,c},a:idx,e:`<b>Stage ${idx+1}</b> uses block size ${st.k} and stride ${st.j}.<br>Current ${st.k}-wire blocks: <code>${esc(blockStr(before,st.k))}</code><br>This stage runs ${st.c.length} comparators in parallel and triggers ${stageSwaps} swap(s).<br>Before: <code>${esc(before.join(", "))}</code><br>After: <code>${esc(cur.join(", "))}</code><ul>${compListHTML(items)}</ul>`})
+steps.push({t:`Stage ${idx+1}`,h:`Stage ${idx+1}`,v:`k=${st.k}, j=${st.j}, ${st.c.length} comps`,l:[1,2,3,4,5,6,7],s:{cmp,sw,stage:idx+1,total:sg.length,n:arr.length,c},a:idx,e:`<b>Stage ${idx+1}</b> uses block size ${st.k} and stride ${st.j}.<br>Current ${st.k}-element blocks: <code>${esc(blockStr(before,st.k))}</code><br>This stage runs ${st.c.length} comparators in parallel and performs ${stageSwaps} swap(s).<br>Before: <code>${esc(before.join(", "))}</code><br>After: <code>${esc(cur.join(", "))}</code><ul>${compListHTML(items)}</ul>`})
 });
 return{steps,extra:{sg,snap}}
 }
