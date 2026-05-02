@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Strassen's Fast Matrix Multiplication — BSD 404</title>
+<style>
+:root{
+  --bg:#0b1520;--surface:#112030;--surface2:#152840;
+  --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.13);
+  --text:#ddeeff;--muted:#6a9ab8;--faint:#3a6080;
+  --accent:#38d9c0;--accent2:#ffc94d;--accent3:#ff6b5b;--accent4:#7eb8ff;
+  --ok:#5de89a;
+  --fs:13px;--fs-sm:12px;--fs-xs:11px;--fs-md:14px;
+  --fw:400;--fwb:700;--fwm:600;
+  --mono:'JetBrains Mono',Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --r:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);font-size:var(--fs);color:var(--text);
+  background:var(--bg);line-height:1.5;overflow-x:hidden}
+
+/* PAGE */
+.page{display:grid;grid-template-rows:auto 1fr auto;min-height:100vh}
+
+/* HEADER */
+.hdr{background:var(--surface);border-bottom:1px solid var(--border2);
+  padding:9px 18px;display:flex;align-items:center;justify-content:space-between;
+  gap:10px;flex-wrap:wrap}
+.hdr-title{font-size:14px;font-weight:var(--fwb);color:var(--text)}
+.hdr-title em{color:var(--accent);font-style:normal;margin-right:5px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:var(--fs-xs);padding:3px 8px;border-radius:999px;
+  background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted)}
+.chip.hi{background:rgba(56,217,192,.1);border-color:rgba(56,217,192,.25);color:var(--accent)}
+
+/* MAIN SPLIT */
+.main{display:grid;grid-template-columns:320px 1fr;min-height:0}
+.left{
+  border-right:1px solid var(--border);
+  display:grid;gap:0;
+}
+.right{
+  display:grid;gap:0;
+}
+
+/* PANEL */
+.panel{border-bottom:1px solid var(--border)}
+.ph{padding:7px 13px;background:var(--surface);display:flex;
+  align-items:center;justify-content:space-between;gap:8px;
+  font-size:var(--fs-sm);font-weight:var(--fwb);color:var(--text)}
+.ph .lbl{font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fw)}
+.pb{padding:11px 13px}
+
+/* FORM */
+label{font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fwb);
+  text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px}
+textarea,input[type=number]{width:100%;padding:6px 9px;border-radius:var(--r);
+  border:1px solid var(--border2);background:rgba(0,0,0,.3);color:var(--text);
+  font:var(--fs-sm)/1.5 var(--mono);outline:none;resize:vertical;transition:border-color .15s}
+textarea:focus,input:focus{border-color:rgba(56,217,192,.4)}
+textarea{min-height:64px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;
+  border-radius:999px;background:rgba(255,255,255,.1);outline:none;cursor:pointer;border:none;padding:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;
+  border-radius:50%;background:var(--accent);border:2px solid var(--bg);cursor:pointer}
+
+/* BUTTONS */
+.btn-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+button{font:var(--fs-sm)/1 var(--sans);padding:5px 11px;border-radius:var(--r);
+  cursor:pointer;border:1px solid var(--border2);background:rgba(255,255,255,.05);
+  color:var(--text);transition:all .15s}
+button:hover{background:rgba(56,217,192,.12);border-color:rgba(56,217,192,.35);color:var(--accent)}
+button:disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
+button.primary{background:rgba(56,217,192,.15);border-color:rgba(56,217,192,.4);
+  color:var(--accent);font-weight:var(--fwb)}
+button.primary:hover{background:rgba(56,217,192,.25)}
+.presets{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.presets button{font-size:var(--fs-xs);padding:4px 9px}
+
+/* STATS */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.stat-box{padding:7px 9px;border-radius:var(--r);border:1px solid var(--border);
+  background:rgba(0,0,0,.2)}
+.stat-box .k{font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fwb);
+  text-transform:uppercase;letter-spacing:.04em}
+.stat-box .v{font-size:var(--fs-md);font-weight:var(--fwb);font-family:var(--mono);
+  margin-top:2px;color:var(--text)}
+
+/* PROGRESS */
+.progress{height:3px;background:rgba(255,255,255,.06);border-radius:999px;overflow:hidden;margin:7px 0 0}
+.progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent4));transition:width .2s}
+
+/* NOTE */
+.note{font-size:var(--fs-sm);color:var(--muted);line-height:1.55;
+  padding:7px 9px;border-radius:var(--r);background:rgba(0,0,0,.15);
+  border:1px solid var(--border);margin-top:5px}
+.note.err{background:rgba(255,80,60,.07);border-color:rgba(255,80,60,.25);color:#ffc8c0}
+.note.ok{background:rgba(93,232,154,.07);border-color:rgba(93,232,154,.25);color:#b0f0cc}
+
+/* HISTORY */
+.hist-wrap{max-height:200px;overflow-y:auto;border-radius:var(--r);border:1px solid var(--border)}
+.hist-wrap::-webkit-scrollbar{width:3px}
+.hist-wrap::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+th{padding:5px 8px;background:var(--surface2);font-size:var(--fs-xs);font-weight:var(--fwb);
+  color:var(--muted);text-align:left;text-transform:uppercase;letter-spacing:.04em;
+  position:sticky;top:0;z-index:1}
+td{padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.04);
+  vertical-align:top;font-family:var(--mono);font-size:var(--fs-sm)}
+tbody tr{cursor:pointer}
+tbody tr:hover,tbody tr.cur{background:rgba(56,217,192,.07)}
+
+/* PSEUDOCODE */
+.pseudo{display:grid;gap:2px}
+.pline{display:grid;grid-template-columns:22px 1fr;gap:5px;
+  padding:4px 7px;border-radius:5px;border:1px solid transparent;
+  font-size:var(--fs-sm);color:var(--muted);cursor:help;transition:all .12s}
+.pline:hover{background:rgba(255,255,255,.03)}
+.pline.active{background:rgba(56,217,192,.09);border-color:rgba(56,217,192,.2);color:var(--text)}
+.pline .ln{color:var(--accent2);text-align:right;font-size:10px;margin-top:1px;
+  font-family:var(--mono)}
+.pline code{font-family:var(--mono);font-size:var(--fs-sm)}
+
+/* VIZ HEADER */
+.viz-hdr{padding:8px 15px;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.legend{display:flex;flex-wrap:wrap;gap:10px}
+.legend span{display:flex;align-items:center;gap:5px;font-size:var(--fs-xs);color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* VIZ BODY */
+.vb{padding:14px 15px}
+.svg-box{border-radius:var(--r);border:1px solid var(--border);
+  background:rgba(3,10,20,.8);overflow:hidden}
+svg{display:block;width:100%;height:auto}
+
+/* SUBPRODUCT STRIP */
+.sub-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:10px}
+.sub-card{padding:6px 7px;border-radius:var(--r);border:1px solid var(--border);
+  background:rgba(0,0,0,.2);border-top:2px solid transparent;transition:all .2s}
+.sub-card.active{background:rgba(255,201,77,.07);border-color:rgba(255,201,77,.3)}
+.sub-card.done{background:rgba(93,232,154,.05);border-color:rgba(93,232,154,.2)}
+.sub-card .sn{font-size:var(--fs-sm);font-weight:var(--fwb);font-family:var(--mono)}
+.sub-card .sf{font-size:9px;color:var(--muted);margin-top:2px;line-height:1.3}
+.sub-card .sv{font-size:9px;color:var(--ok);margin-top:3px;font-family:var(--mono);
+  white-space:pre-wrap;word-break:break-all;line-height:1.3}
+
+/* EXPLANATION */
+.exp{margin-top:10px;padding:10px 12px;border-radius:var(--r);
+  background:rgba(0,0,0,.2);border:1px solid var(--border);
+  font-size:var(--fs-sm);line-height:1.65}
+.exp code{background:rgba(56,217,192,.08);border:1px solid rgba(56,217,192,.15);
+  padding:1px 4px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--accent)}
+.exp b{color:var(--accent2)}
+
+/* RECURRENCE */
+.rec-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px}
+.rec-card{padding:9px 11px;border-radius:var(--r);border:2px solid var(--border);text-align:center}
+.rec-card.naive{border-color:rgba(255,107,91,.3);background:rgba(255,107,91,.05)}
+.rec-card.fast{border-color:rgba(56,217,192,.3);background:rgba(56,217,192,.05)}
+.rc-lbl{font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fwb);
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.rc-eq{font-size:var(--fs-xs);font-family:var(--mono);color:var(--text);margin-bottom:3px}
+.rc-big{font-size:14px;font-weight:var(--fwb);color:var(--accent3)}
+.rec-card.fast .rc-big{color:var(--accent)}
+
+/* EDU */
+.edu-body{font-size:var(--fs-sm);line-height:1.6;color:var(--muted)}
+.edu-body b{color:var(--accent);font-weight:var(--fwm)}
+
+/* SPEED ROW */
+.speed-row{display:flex;align-items:center;gap:9px;margin-top:5px}
+.speed-row input{flex:1}
+.speed-row span{font-size:var(--fs-sm);font-family:var(--mono);color:var(--muted);min-width:36px}
+
+/* CONCEPTS GRID */
+.concepts{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+
+footer{text-align:center;font-size:var(--fs-xs);color:var(--faint);
+  padding:8px;border-top:1px solid var(--border)}
+
+@media(max-width:820px){
+  .main{grid-template-columns:1fr}
+  .sub-strip{grid-template-columns:repeat(4,1fr)}
+  .rec-row,.concepts{grid-template-columns:1fr}
+}
+@media(max-width:480px){.sub-strip{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hdr">
+  <div class="hdr-title"><em>Strassen's</em>Fast Matrix Multiplication</div>
+  <div class="chips">
+    <span class="chip hi">CLO-2</span>
+    <span class="chip">BSD 404 · Algorithms II</span>
+    <span class="chip">CLRS Ch. 4.2 &amp; 28</span>
+    <span class="chip">Houssein Ahmed</span>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- LEFT -->
+  <aside class="left">
+
+    <div class="panel">
+      <div class="ph">Controls <span class="lbl">2×2 or 4×4 · Space=play/pause · →=step · R=reset</span></div>
+      <div class="pb">
+        <div style="margin-bottom:9px"><label for="mat-a">Matrix A</label>
+          <textarea id="mat-a" spellcheck="false">1 2 3 4
+5 6 7 8
+2 0 1 3
+4 1 5 2</textarea></div>
+        <div><label for="mat-b">Matrix B</label>
+          <textarea id="mat-b" spellcheck="false">1 0 2 1
+3 1 0 2
+4 2 1 0
+2 3 1 1</textarea></div>
+        <div class="presets">
+          <button data-sp="c2">2×2 Classic</button>
+          <button data-sp="b4">4×4 Blocks</button>
+          <button data-sp="s4">4×4 Signed</button>
+          <button data-sp="id">Identity</button>
+        </div>
+        <div style="margin-top:9px"><label>Speed</label>
+          <div class="speed-row">
+            <input id="speed" type="range" min="0.25" max="4" step="0.25" value="1">
+            <span id="speed-val">1.00×</span>
+          </div></div>
+        <div class="btn-row">
+          <button id="btn-build" class="primary">Build Steps</button>
+          <button id="btn-step">Step</button>
+          <button id="btn-play">Play</button>
+          <button id="btn-pause">Pause</button>
+          <button id="btn-reset">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">State <span class="lbl">Live counters</span></div>
+      <div class="pb">
+        <div class="stat-grid">
+          <div class="stat-box"><div class="k">Step</div><div class="v" id="counter">0 / 0</div></div>
+          <div class="stat-box"><div class="k">Status</div><div class="v" id="status">Idle</div></div>
+          <div class="stat-box"><div class="k">Size</div><div class="v" id="s-size">—</div></div>
+          <div class="stat-box"><div class="k">P done</div><div class="v" id="s-pdone">0 / 7</div></div>
+          <div class="stat-box"><div class="k">Leaf mults</div><div class="v" id="s-leaf">0</div></div>
+          <div class="stat-box"><div class="k">Add/sub ops</div><div class="v" id="s-ops">0</div></div>
+        </div>
+        <div class="progress"><div id="prog" class="progress-fill"></div></div>
+        <div class="note" id="state-note" style="margin-top:6px">Click <b>Build Steps</b> to start.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Recurrence Comparison</div>
+      <div class="pb">
+        <div class="rec-row">
+          <div class="rec-card naive">
+            <div class="rc-lbl">Naive · 8 mults</div>
+            <div class="rc-eq">T(n)=8T(n/2)+O(n²)</div>
+            <div class="rc-big">O(n³)</div>
+          </div>
+          <div class="rec-card fast">
+            <div class="rc-lbl">Strassen · 7 mults</div>
+            <div class="rc-eq">T(n)=7T(n/2)+O(n²)</div>
+            <div class="rc-big">O(n<sup>2.807</sup>)</div>
+          </div>
+        </div>
+        <div class="note" style="margin-top:7px">Saving one multiplication per recursion level changes the exponent from log₂8=3 to log₂7≈2.807. This compounds as n grows.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Crossover Point <span class="lbl">Build to compute</span></div>
+      <div class="pb" id="cross-body">
+        <div class="note">Appears after clicking Build Steps.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Step History <span class="lbl">Click row to jump</span></div>
+      <div class="pb">
+        <div class="hist-wrap"><table>
+          <thead><tr><th>#</th><th>Step</th><th>Value</th></tr></thead>
+          <tbody id="history"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Overview</div>
+      <div class="pb">
+        <div class="edu-body">
+          <b>What changes vs naive.</b> Standard recurrence: T(n)=8T(n/2)+O(n²). Strassen uses 7 products instead of 8, giving T(n)=7T(n/2)+O(n²) ≈ O(n<sup>2.807</sup>).<br><br>
+          <b>Why stop at 2×2 leaves.</b> Keeps arithmetic readable while showing the full structure: split → P1–P7 → recombine C11–C22.<br><br>
+          <b>Parallelism.</b> The 7 products are data-independent once quadrant sums and differences are ready.
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Worked Example</div>
+      <div class="pb">
+        <div class="edu-body">
+          <b>Load 4×4 Blocks preset.</b> A and B split into 2×2 quadrants. Then 7 products are computed — e.g. P1=(A11+A22)(B11+B22), P4=A22·(B21−B11).<br><br>
+          Once all 7 are ready, combine:<br>
+          C11 = P1+P4−P5+P7<br>
+          C12 = P3+P5<br>
+          C21 = P2+P4<br>
+          C22 = P1−P2+P3+P6
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Key Concepts</div>
+      <div class="pb">
+        <div class="concepts">
+          <div class="stat-box"><div class="k">7 subproblems</div><div style="font-size:var(--fs-sm);margin-top:3px;color:var(--muted)">P1..P7 replace 8 standard recursive multiplications</div></div>
+          <div class="stat-box"><div class="k">Parallelism</div><div style="font-size:var(--fs-sm);margin-top:3px;color:var(--muted)">All 7 products can be computed simultaneously</div></div>
+          <div class="stat-box"><div class="k">Crossover</div><div style="font-size:var(--fs-sm);margin-top:3px;color:var(--muted)">Constants matter — Strassen wins only above a threshold n</div></div>
+          <div class="stat-box"><div class="k">History</div><div style="font-size:var(--fs-sm);margin-top:3px;color:var(--muted)">Strassen 1969 — first to break the cubic O(n³) bound</div></div>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- RIGHT -->
+  <div class="right">
+
+    <div class="viz-hdr">
+      <div class="legend">
+        <span><i class="dot" style="background:var(--accent)"></i>Active</span>
+        <span><i class="dot" style="background:var(--accent2)"></i>Quadrant borders</span>
+        <span><i class="dot" style="background:var(--accent4)"></i>Completed</span>
+        <span><i class="dot" style="background:var(--accent3)"></i>Combine phase</span>
+      </div>
+      <span class="lbl">Partition · P1..P7 · Recombine</span>
+    </div>
+
+    <div class="vb">
+      <div class="svg-box"><svg id="main-svg" viewBox="0 0 960 390"></svg></div>
+      <div class="sub-strip" id="sub-strip"></div>
+      <div class="svg-box" style="margin-top:10px"><svg id="tree-svg" viewBox="0 0 960 155"></svg></div>
+      <div class="exp" id="exp">Step explanation appears here.</div>
+    </div>
+
+    <div class="panel" style="border-top:1px solid var(--border)">
+      <div class="ph">Pseudocode <span class="lbl">Hover line for tooltip · Active line highlighted</span></div>
+      <div class="pb"><div id="pseudo" class="pseudo"></div></div>
+    </div>
+
+    <!-- Algorithm Explanation — below visualization -->
+    <div class="panel">
+      <div class="ph" style="background:rgba(56,217,192,.06)">The Main Idea <span class="lbl">Algorithm overview</span></div>
+      <div class="pb">
+        <div class="edu-body" style="font-size:var(--fs)">
+          <b>The problem.</b> Multiplying two n×n matrices the standard way requires n³ scalar multiplications. For large matrices this becomes very expensive.<br><br>
+          <b>Strassen's insight (1969).</b> When you split each matrix into four quadrant blocks, the naive approach needs <b style="color:var(--accent3)">8 recursive multiplications</b> to compute the result. Strassen found a way to get the same result using only <b style="color:var(--accent)">7 multiplications</b> — at the cost of a few extra additions and subtractions.<br><br>
+          <b>Why 7 instead of 8 matters.</b> One fewer multiplication per recursion level changes the complexity from O(n³) to O(n<sup>log₂7</sup>) ≈ O(n<sup>2.807</sup>). This seems like a small difference, but it compounds at every level of recursion. For a 1024×1024 matrix, that is roughly 25% fewer operations.<br><br>
+          <b>How it works.</b> Split A and B into four blocks each (A11, A12, A21, A22, B11, B12, B21, B22). Compute 7 specific products P1–P7 using clever sums and differences of these blocks. Then recombine P1–P7 into the four quadrants of the result: C11, C12, C21, C22. The formulas are designed so the recombination works out exactly.<br><br>
+          <b>Trade-off.</b> Strassen uses fewer multiplications but more additions. For small matrices, the extra additions outweigh the savings. There is a <b>crossover point</b> above which Strassen becomes faster — shown in the crossover table on the left.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<footer>BSD 404 · Algorithms II · Strassen's Fast Matrix Multiplication · HTML5 · CSS3 · Vanilla JS · SVG — no external libraries</footer>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const fmt=v=>Number.isInteger(v)?String(v):(+v).toFixed(2).replace(/\.00$/,'');
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const short=(s,mx=80)=>{const t=String(s).replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();return t.length>mx?t.slice(0,mx-1)+'…':t};
+
+const PRESETS={
+  c2:{a:'1 3\n7 5',b:'6 8\n4 2'},
+  b4:{a:'1 2 3 4\n5 6 7 8\n2 0 1 3\n4 1 5 2',b:'1 0 2 1\n3 1 0 2\n4 2 1 0\n2 3 1 1'},
+  s4:{a:'2 -1 3 0\n4 1 -2 5\n0 2 1 -3\n6 -4 2 1',b:'1 2 -1 0\n0 3 4 1\n5 -2 2 2\n1 0 3 -1'},
+  id:{a:'3 1 4 1\n5 9 2 6\n5 3 5 8\n9 7 9 3',b:'1 0 0 0\n0 1 0 0\n0 0 1 0\n0 0 0 1'}
+};
+const PDEF=[
+  {n:'P1',f:'(A11+A22)(B11+B22)',c:'#38d9c0'},
+  {n:'P2',f:'(A21+A22)·B11',c:'#7eb8ff'},
+  {n:'P3',f:'A11·(B12−B22)',c:'#ffc94d'},
+  {n:'P4',f:'A22·(B21−B11)',c:'#ff6b5b'},
+  {n:'P5',f:'(A11+A12)·B22',c:'#b085f5'},
+  {n:'P6',f:'(A21−A11)(B11+B12)',c:'#5de89a'},
+  {n:'P7',f:'(A12−A22)(B21+B22)',c:'#ff91b0'}
+];
+const PSEUDO=[
+  ['STRASSEN(A, B, n)','Entry point for Strassen multiplication.'],
+  ['  if n == 1: return A·B','Base case: direct scalar multiplication.'],
+  ['  Split A,B → A11,A12,A21,A22 / B11,B12,B21,B22','Divide each matrix into four (n/2)×(n/2) quadrant blocks.'],
+  ['  P1 = STRASSEN(A11+A22, B11+B22)','1st product: sum of diagonal blocks of A times sum of diagonal blocks of B.'],
+  ['  P2 = STRASSEN(A21+A22, B11)','2nd product: bottom-row sum of A times B11.'],
+  ['  P3 = STRASSEN(A11, B12−B22)','3rd product: A11 times top-column difference of B.'],
+  ['  P4 = STRASSEN(A22, B21−B11)','4th product: A22 times bottom-column difference of B.'],
+  ['  P5 = STRASSEN(A11+A12, B22)','5th product: top-row sum of A times B22.'],
+  ['  P6 = STRASSEN(A21−A11, B11+B12)','6th product: left-column difference of A times top-row sum of B.'],
+  ['  P7 = STRASSEN(A12−A22, B21+B22)','7th product: right-column difference of A times bottom-row sum of B.'],
+  ['  C11 = P1 + P4 − P5 + P7','Combine: top-left quadrant of the result.'],
+  ['  C12 = P3 + P5','Combine: top-right quadrant.'],
+  ['  C21 = P2 + P4','Combine: bottom-left quadrant.'],
+  ['  C22 = P1 − P2 + P3 + P6','Combine: bottom-right quadrant.'],
+  ['  return join(C11, C12, C21, C22)','Merge the four result quadrants into the final n×n matrix C.']
+];
+
+// matrix ops
+const parseMatrix=s=>{
+  const r=s.trim().replace(/;/g,'\n').split(/\n+/).map(x=>x.trim()).filter(Boolean)
+    .map(x=>x.split(/[\s,]+/).map(Number));
+  if(!r.length||r.some(row=>row.some(Number.isNaN)))throw Error('Enter numbers only.');
+  const n=r.length;
+  if(!r.every(row=>row.length===n))throw Error('Matrix must be square.');
+  if(![2,4].includes(n))throw Error('Only 2×2 or 4×4 supported.');
+  return r;
+};
+const add=(A,B)=>A.map((r,i)=>r.map((v,j)=>v+B[i][j]));
+const sub=(A,B)=>A.map((r,i)=>r.map((v,j)=>v-B[i][j]));
+const mul=(A,B)=>{const n=A.length,C=Array.from({length:n},()=>Array(n).fill(0));
+  for(let i=0;i<n;i++)for(let j=0;j<n;j++)for(let k=0;k<n;k++)C[i][j]+=A[i][k]*B[k][j];return C};
+const splitM=M=>{const h=M.length/2,t=M.slice(0,h),b=M.slice(h);
+  return{A11:t.map(r=>r.slice(0,h)),A12:t.map(r=>r.slice(h)),
+         A21:b.map(r=>r.slice(0,h)),A22:b.map(r=>r.slice(h))}};
+const joinM=(C11,C12,C21,C22)=>[...C11.map((r,i)=>[...r,...C12[i]]),...C21.map((r,i)=>[...r,...C22[i]])];
+const mS=M=>'['+M.map(r=>'['+r.map(fmt).join(', ')+']').join(', ')+']';
+const cM=M=>`<code>${esc(mS(M))}</code>`;
+const cellArith=(A,B,M)=>{const out=[];
+  for(let i=0;i<M.length;i++)for(let j=0;j<M[0].length;j++){
+    const t=A[i].map((v,k)=>`${fmt(v)}×${fmt(B[k][j])}`).join('+');
+    out.push(`c${i+1}${j+1}: ${t} = ${fmt(M[i][j])}`)}return out.join('<br>')};
+const cmbHTML=(terms,res)=>terms.map((x,i)=>`${i?` ${x.s} `:''}${cM(x.M)}`).join('')+'<br>= '+cM(res);
+
+// crossover
+const tc=n=>n<=1?1:7*tc(n/2)+18*0.2*(n/2)*(n/2);
+function crossTable(){
+  const rows=[2,4,8,16,32,64,128].map(n=>({n,na:n**3,st:Math.round(tc(n))}));
+  const co=rows.find(r=>r.st<r.na);
+  return`<div class="note" style="margin-bottom:7px">Cost model: 1 addition = 0.2 × 1 multiplication. Determines when Strassen's extra additions are outweighed by fewer multiplications.</div>
+<div class="hist-wrap"><table>
+<thead><tr><th>n</th><th>Naive ops</th><th>Strassen ops</th><th>Winner</th></tr></thead>
+<tbody>${rows.map(r=>`<tr><td>${r.n}</td><td>${r.na.toLocaleString()}</td><td>${r.st.toLocaleString()}</td>
+<td style="color:${r.st<r.na?'var(--ok)':'var(--muted)'};font-weight:700">${r.st<r.na?'Strassen ✓':'Naive'}</td></tr>`).join('')}</tbody>
+</table></div>
+<div class="note ok" style="margin-top:6px">Crossover at n=${co?co.n:'not reached'}. Above this size Strassen uses fewer operations under this cost model.</div>`;
+}
+
+// SVG grid
+function cellColor(v,mx){const a=0.1+0.55*(mx?Math.abs(v)/mx:0);
+  return v>=0?`rgba(56,217,192,${a})`:`rgba(255,107,91,${a})`}
+function gridSVG(M,x,y,cs,label,showQ,expectedN){
+  let p=[];
+  p.push(`<text x="${x}" y="${y-7}" fill="#ddeeff" font-size="13" font-weight="700" font-family="-apple-system,sans-serif">${esc(label)}</text>`);
+  if(!M){
+    const nn=expectedN||2;
+    const s=cs*nn;
+    p.push(`<rect x="${x}" y="${y}" width="${s}" height="${s}" rx="7" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.08)"/>`);
+    p.push(`<text x="${x+s/2}" y="${y+s/2+4}" text-anchor="middle" fill="rgba(255,255,255,.2)" font-size="11">pending</text>`);
+    return p.join('');
+  }
+  const n=M.length;
+  const vals=M.flat(),mx=Math.max(1,...vals.map(v=>Math.abs(v)));
+  p.push(`<rect x="${x}" y="${y}" width="${cs*n}" height="${cs*n}" rx="7" fill="rgba(0,0,0,.3)" stroke="rgba(255,255,255,.1)"/>`);
+  for(let r=0;r<n;r++)for(let c=0;c<n;c++){
+    p.push(`<rect x="${x+c*cs}" y="${y+r*cs}" width="${cs}" height="${cs}" fill="${cellColor(M[r][c],mx)}" stroke="rgba(255,255,255,.06)"/>`);
+    const fs=n===4?11:14;
+    p.push(`<text x="${x+c*cs+cs/2}" y="${y+r*cs+cs/2+fs*.34}" text-anchor="middle" fill="#ddeeff" font-size="${fs}" font-family="JetBrains Mono,Consolas,monospace">${esc(fmt(M[r][c]))}</text>`);
+  }
+  if(showQ&&n===4){
+    [[0,0,'11','#ffc94d'],[2,0,'12','#7eb8ff'],[0,2,'21','#ff6b5b'],[2,2,'22','#5de89a']].forEach(([qc,qr,t,col])=>{
+      p.push(`<rect x="${x+qc*cs}" y="${y+qr*cs}" width="${2*cs}" height="${2*cs}" fill="none" stroke="${col}" stroke-width="1.8" stroke-opacity=".55" rx="3"/>`);
+      p.push(`<text x="${x+qc*cs+5}" y="${y+qr*cs+12}" fill="${col}" font-size="10" font-weight="700" opacity=".8">${label}${t}</text>`);
+    });
+  }
+  if(showQ&&n===2){
+    ['11','12','21','22'].forEach((t,i)=>
+      p.push(`<text x="${x+(i%2)*cs+5}" y="${y+Math.floor(i/2)*cs+12}" fill="rgba(255,201,77,.7)" font-size="9" font-weight="700">${label}${t}</text>`)
+    );
+  }
+  return p.join('');
+}
+
+// make steps
+function makeSteps(){
+  const A=parseMatrix($('mat-a').value),B=parseMatrix($('mat-b').value);
+  if(A.length!==B.length)throw Error('A and B must be the same size.');
+  const n=A.length;
+  const AQ=splitM(A),BQ=splitM(B);
+  const X={A11:AQ.A11,A12:AQ.A12,A21:AQ.A21,A22:AQ.A22,
+            B11:BQ.A11,B12:BQ.A12,B21:BQ.A21,B22:BQ.A22};
+  const steps=[];let done={},ops=0,leaf=0;
+
+  steps.push({t:'Load',h:'Load matrices',v:`${n}×${n}`,l:[1],s:{n,p:0,ops,leaf},
+    vis:{m:'load',L:A,R:B,RL:null,q:1,active:'',done:{}},
+    e:`<b>Two ${n}×${n} matrices loaded.</b><br>A = ${cM(A)}<br>B = ${cM(B)}<br><br>Strassen splits each matrix into quadrant blocks, computes 7 independent products P1–P7, then recombines them — avoiding one of the 8 multiplications the naive algorithm uses.`});
+
+  steps.push({t:'Partition',h:'Split into quadrants',v:`${n/2}×${n/2} blocks`,l:[3],s:{n,p:0,ops,leaf},
+    vis:{m:'part',L:A,R:B,RL:null,q:1,active:'',done:{}},
+    e:`<b>Each matrix is split into four ${n/2}×${n/2} blocks.</b><br>
+A11=${cM(X.A11)} A12=${cM(X.A12)}<br>A21=${cM(X.A21)} A22=${cM(X.A22)}<br><br>
+B11=${cM(X.B11)} B12=${cM(X.B12)}<br>B21=${cM(X.B21)} B22=${cM(X.B22)}<br><br>
+Colored borders on the matrices show each quadrant. The 7 products that follow are all independent once these quadrants are defined.`});
+
+  const rec=[
+    ['P1',add(X.A11,X.A22),add(X.B11,X.B22),4,'A11+A22','B11+B22'],
+    ['P2',add(X.A21,X.A22),X.B11,5,'A21+A22','B11'],
+    ['P3',X.A11,sub(X.B12,X.B22),6,'A11','B12−B22'],
+    ['P4',X.A22,sub(X.B21,X.B11),7,'A22','B21−B11'],
+    ['P5',add(X.A11,X.A12),X.B22,8,'A11+A12','B22'],
+    ['P6',sub(X.A21,X.A11),add(X.B11,X.B12),9,'A21−A11','B11+B12'],
+    ['P7',sub(X.A12,X.A22),add(X.B21,X.B22),10,'A12−A22','B21+B22']
+  ];
+  rec.forEach((r,i)=>{
+    const M=mul(r[1],r[2]);done[r[0]]=M;
+    const sz=r[1].length;
+    ops+=(['P2','P3','P4','P5'].includes(r[0])?sz*sz:4*sz*sz);leaf+=sz**3;
+    steps.push({t:r[0],h:r[0],v:mS(M),l:[r[3]],s:{n,p:i+1,ops,leaf},
+      vis:{m:'sub',L:r[1],R:r[2],RL:M,q:0,active:r[0],done:JSON.parse(JSON.stringify(done))},
+      e:`<b>${r[0]} = ${PDEF[i].f}</b><br>Left (${esc(r[4])}): ${cM(r[1])}<br>Right (${esc(r[5])}): ${cM(r[2])}<br><br>Cell arithmetic:<br>${cellArith(r[1],r[2],M)}<br><br>Result ${r[0]} = ${cM(M)}`});
+  });
+
+  const C11=add(sub(add(done.P1,done.P4),done.P5),done.P7);
+  const C12=add(done.P3,done.P5);
+  const C21=add(done.P2,done.P4);
+  const C22=add(add(sub(done.P1,done.P2),done.P3),done.P6);
+  const C=joinM(C11,C12,C21,C22);
+  ops+=8*(n/2)*(n/2);
+
+  [['C11',C11,11,'P1+P4−P5+P7',[{s:'',M:done.P1},{s:'+',M:done.P4},{s:'−',M:done.P5},{s:'+',M:done.P7}]],
+   ['C12',C12,12,'P3+P5',[{s:'',M:done.P3},{s:'+',M:done.P5}]],
+   ['C21',C21,13,'P2+P4',[{s:'',M:done.P2},{s:'+',M:done.P4}]],
+   ['C22',C22,14,'P1−P2+P3+P6',[{s:'',M:done.P1},{s:'−',M:done.P2},{s:'+',M:done.P3},{s:'+',M:done.P6}]]]
+  .forEach(x=>steps.push({t:x[0],h:'Combine '+x[0],v:mS(x[1]),l:[x[2]],s:{n,p:7,ops,leaf},
+    vis:{m:'comb',L:x[1],R:null,RL:C,q:0,active:x[0],done:JSON.parse(JSON.stringify(done))},
+    e:`<b>${x[0]} = ${x[3]}</b><br>${cmbHTML(x[4],x[1])}`}));
+
+  const naiveC=mul(A,B);
+  const match=naiveC.every((row,i)=>row.every((v,j)=>Math.abs(v-C[i][j])<1e-9));
+  steps.push({t:'Final',h:'Final result C',v:mS(C),l:[15],s:{n,p:7,ops,leaf},
+    vis:{m:'final',L:A,R:B,RL:C,q:0,active:'',done:JSON.parse(JSON.stringify(done))},
+    e:`<b>All four quadrants assembled into C = A×B.</b><br>
+C11=${cM(C11)}<br>C12=${cM(C12)}<br>C21=${cM(C21)}<br>C22=${cM(C22)}<br><br>
+Final C = ${cM(C)}<br><br>
+Naive verification: ${match?'<span style="color:var(--ok)">✓ Strassen result matches naive multiplication exactly.</span>':'<span style="color:var(--accent3)">⚠ Mismatch detected.</span>'}<br>
+Scalar leaf multiplications: <b>${leaf}</b> (naive: ${n**3}). Addition/subtraction ops: <b>${ops}</b>.`});
+
+  return{steps,extra:{n}};
+}
+
+// draw
+function draw(cur,err){
+  if(!cur){
+    $('main-svg').innerHTML='';$('sub-strip').innerHTML='';$('tree-svg').innerHTML='';
+    $('exp').innerHTML=`<span style="color:var(--muted)">${esc(err||'Click Build Steps to begin.')}</span>`;
+    return;
+  }
+  const v=cur.vis;
+  // pick cell size based on the largest matrix present (could be 4×4 result during 2×2 combine steps)
+  const dims=[v.L,v.R,v.RL].filter(Boolean).map(m=>m.length);
+  const maxDim=dims.length?Math.max(...dims):4;
+  const cs=maxDim===4?52:88;
+  const nL=v.L?v.L.length:maxDim;
+  const matH=cs*maxDim;
+  let p=[];
+  const aW=cs*(v.L?v.L.length:maxDim);
+  p.push(gridSVG(v.L,28,46,cs,v.m==='comb'?cur.t:'A',v.q,maxDim));
+  const bx=28+aW+48;
+  const opY=46+matH/2+10;
+  p.push(`<text x="${bx-26}" y="${opY}" fill="rgba(255,255,255,.28)" font-size="30">×</text>`);
+  const bW=cs*(v.R?v.R.length:maxDim);
+  p.push(gridSVG(v.R,bx,46,cs,v.m==='comb'?'With':'B',v.q,maxDim));
+  const ex=bx+bW+48;
+  p.push(`<text x="${ex-26}" y="${opY}" fill="rgba(255,255,255,.28)" font-size="30">=</text>`);
+  p.push(gridSVG(v.RL,ex+2,46,cs,v.m==='sub'?cur.t:v.m==='final'?'C':'Result',0,maxDim));
+  const svgH=matH+100;
+  p.push(`<text x="28" y="${svgH-8}" fill="rgba(106,154,184,.45)" font-size="11">Recursion stops at 2×2 leaves. Colored borders mark quadrant partitions.</text>`);
+  $('main-svg').setAttribute('viewBox',`0 0 960 ${svgH}`);
+  $('main-svg').innerHTML=p.join('');
+
+  $('sub-strip').innerHTML=PDEF.map(d=>{
+    const isA=v.active===d.n,isDone=!!v.done[d.n];
+    return`<div class="sub-card ${isA?'active':''} ${isDone?'done':''}" style="border-top-color:${d.c}">
+<div class="sn" style="color:${isA?'#ffc94d':isDone?'var(--ok)':'var(--text)'}">${d.n}</div>
+<div class="sf">${esc(d.f)}</div>
+<div class="sv">${isDone?esc(mS(v.done[d.n])):'—'}</div>
+</div>`;}).join('');
+
+  let t=[];
+  const n=state.extra.n||4;
+  t.push(`<circle cx="480" cy="28" r="22" fill="rgba(56,217,192,.1)" stroke="var(--accent)" stroke-width="1.5"/>`);
+  t.push(`<text x="480" y="33" text-anchor="middle" fill="var(--text)" font-size="12" font-family="JetBrains Mono,monospace">n=${n}</text>`);
+  t.push(`<text x="480" y="62" text-anchor="middle" fill="var(--muted)" font-size="11">Root A×B</text>`);
+  PDEF.forEach((d,i)=>{
+    const x=52+i*122,isA=v.active===d.n;
+    t.push(`<line x1="480" y1="49" x2="${x}" y2="104" stroke="rgba(255,255,255,.07)"/>`);
+    t.push(`<circle cx="${x}" cy="120" r="18" fill="${isA?'rgba(255,201,77,.13)':'rgba(0,0,0,.3)'}" stroke="${isA?'#ffc94d':d.c}" stroke-width="${isA?2:1.2}"/>`);
+    t.push(`<text x="${x}" y="124" text-anchor="middle" fill="${isA?'#ffc94d':'var(--text)'}" font-size="12" font-weight="${isA?700:400}" font-family="JetBrains Mono,monospace">${d.n}</text>`);
+  });
+  $('tree-svg').setAttribute('viewBox','0 0 960 148');
+  $('tree-svg').innerHTML=t.join('');
+  $('exp').innerHTML=cur.e;
+}
+
+// render
+let state={steps:[],i:0,status:'Idle',timer:null,speed:1,error:'',extra:{}};
+
+function syncBtns(){
+  const total=state.steps.length?state.steps.length-1:0;
+  const cur=state.steps[state.i];
+  $('btn-step').disabled=!cur||state.i>=total;
+  $('btn-play').disabled=!cur||state.i>=total;
+  $('btn-pause').disabled=state.status!=='Playing';
+  $('btn-reset').disabled=!cur;
+}
+function renderHistory(){
+  const s=Math.max(0,state.i-24);
+  $('history').innerHTML=state.steps.slice(s,state.i+1).map((x,j)=>{
+    const idx=s+j;
+    return`<tr data-i="${idx}" class="${idx===state.i?'cur':''}"><td>${idx}</td><td>${esc(x.h)}</td><td>${esc(short(x.v||''))}</td></tr>`;
+  }).join('');
+}
+function render(){
+  const cur=state.steps[state.i]||null;
+  const total=state.steps.length?state.steps.length-1:0;
+  const pct=total>0?Math.round(state.i*100/total):0;
+  $('counter').textContent=(cur?state.i:0)+' / '+total;
+  $('status').textContent=state.status;
+  $('prog').style.width=`${pct}%`;
+  if(cur){
+    const li=Array.isArray(cur.l)?cur.l.join(','):cur.l;
+    $('state-note').innerHTML=`${esc(cur.h)} — line ${li}`;
+  } else {
+    $('state-note').innerHTML=state.error?`<span style="color:var(--accent3)">${esc(state.error)}</span>`:'Click <b>Build Steps</b> to start.';
+  }
+  const ls=cur?( Array.isArray(cur.l)?cur.l:[cur.l] ):[];
+  document.querySelectorAll('.pline').forEach(el=>el.classList.toggle('active',ls.includes(+el.dataset.line)));
+  const s=cur?cur.s:{n:'—',p:0,ops:0,leaf:0};
+  $('s-size').textContent=s.n?`${s.n}×${s.n}`:'—';
+  $('s-pdone').textContent=`${s.p} / 7`;
+  $('s-leaf').textContent=s.leaf;
+  $('s-ops').textContent=s.ops;
+  syncBtns();renderHistory();draw(cur,state.error);
+}
+
+function stopTimer(){if(state.timer){clearInterval(state.timer);state.timer=null}}
+function buildSteps(){
+  stopTimer();
+  try{
+    const out=makeSteps();
+    state.steps=out.steps;state.extra=out.extra;
+    state.i=0;state.status='Ready';state.error='';
+    $('cross-body').innerHTML=crossTable();
+  }catch(e){
+    state.steps=[];state.i=0;state.extra={};state.status='Idle';state.error=e.message;
+    $('cross-body').innerHTML=`<div class="note err">${esc(e.message)}</div>`;
+  }
+  render();
+}
+function stepFwd(){
+  if(!state.steps.length){buildSteps();return}
+  if(state.i<state.steps.length-1){state.i++;state.status=state.i===state.steps.length-1?'Done':'Paused'}
+  render();
+}
+function playAnim(){
+  if(!state.steps.length)buildSteps();
+  stopTimer();state.status='Playing';render();
+  state.timer=setInterval(()=>{
+    if(state.i<state.steps.length-1){state.i++;
+      if(state.i===state.steps.length-1){stopTimer();state.status='Done';render()}
+      else render();
+    }else{stopTimer();state.status='Done';render()}
+  },clamp(Math.round(1000/(state.speed||1)),180,2800));
+}
+
+$('btn-build').onclick=buildSteps;
+$('btn-step').onclick=stepFwd;
+$('btn-play').onclick=playAnim;
+$('btn-pause').onclick=()=>{stopTimer();state.status='Paused';render()};
+$('btn-reset').onclick=()=>{stopTimer();state.i=0;state.status=state.steps.length?'Ready':'Idle';render()};
+$('speed').oninput=()=>{state.speed=+$('speed').value;$('speed-val').textContent=state.speed.toFixed(2)+'×';if(state.status==='Playing')playAnim()};
+$('history').onclick=e=>{const tr=e.target.closest('tr[data-i]');if(!tr)return;
+  stopTimer();state.i=clamp(+tr.dataset.i,0,state.steps.length-1);
+  state.status=state.i===state.steps.length-1?'Done':'Paused';render()};
+document.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{
+  const p=PRESETS[b.dataset.sp];$('mat-a').value=p.a;$('mat-b').value=p.b;buildSteps()});
+
+// keyboard shortcuts
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='TEXTAREA'||e.target.tagName==='INPUT')return;
+  if(e.key===' '){e.preventDefault();state.status==='Playing'?($('btn-pause').click()):($('btn-play').click())}
+  if(e.key==='ArrowRight'){e.preventDefault();stepFwd()}
+  if(e.key==='ArrowLeft'){e.preventDefault();if(state.i>0){stopTimer();state.i--;state.status='Paused';render()}}
+  if(e.key==='r'||e.key==='R'){$('btn-reset').click()}
+});
+
+// init
+$('pseudo').innerHTML=PSEUDO.map((x,i)=>`<div class="pline" data-line="${i+1}" title="${esc(x[1])}"><span class="ln">${i+1}</span><code>${esc(x[0])}</code></div>`).join('');
+buildSteps();
+</script>
+</body>
+</html>

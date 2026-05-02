@@ -1,0 +1,997 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KMP String Matching — BSD 404</title>
+<style>
+:root{
+  --bg:#08111d;--surface:#0e1e30;--surface2:#152840;--surface3:#1a3350;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);
+  --text:#ddeeff;--muted:#5a8aaa;--faint:#2a5070;
+  --accent:#2dd4bf;--accent2:#f59e0b;--accent3:#f87171;--accent4:#60a5fa;
+  --ok:#34d399;--pink:#f472b6;--purple:#a78bfa;
+  --fs:13px;--fs-sm:12px;--fs-xs:11px;--fs-md:14px;
+  --fw:400;--fwb:700;--fwm:600;
+  --mono:'JetBrains Mono',Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --r:7px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);font-size:var(--fs);color:var(--text);
+  background:var(--bg);line-height:1.5;overflow-x:hidden}
+.page{display:grid;grid-template-rows:auto 1fr auto;min-height:100vh}
+
+/* HEADER */
+.hdr{background:var(--surface);border-bottom:1px solid var(--border2);
+  padding:10px 18px;display:flex;align-items:center;justify-content:space-between;
+  gap:10px;flex-wrap:wrap}
+.hdr-title{font-size:15px;font-weight:var(--fwb);color:var(--text);display:flex;align-items:center;gap:8px}
+.hdr-title em{color:var(--accent);font-style:normal;background:rgba(45,212,191,.1);
+  border:1px solid rgba(45,212,191,.25);padding:2px 9px;border-radius:5px;font-size:13px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:var(--fs-xs);padding:3px 9px;border-radius:999px;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted)}
+.chip.hi{background:rgba(45,212,191,.1);border-color:rgba(45,212,191,.25);color:var(--accent)}
+
+/* LAYOUT — left 420px as required */
+.main{display:grid;grid-template-columns:420px 1fr;min-height:0}
+.left{border-right:1px solid var(--border);display:grid;gap:0;overflow-y:auto;max-height:calc(100vh - 52px)}
+.right{display:grid;gap:0;overflow-y:auto;max-height:calc(100vh - 52px)}
+
+/* PANELS */
+.panel{border-bottom:1px solid var(--border)}
+.ph{padding:7px 13px;background:var(--surface);display:flex;
+  align-items:center;justify-content:space-between;gap:8px;
+  font-size:var(--fs-sm);font-weight:var(--fwb);color:var(--text);
+  cursor:pointer;user-select:none}
+.ph:hover{background:var(--surface2)}
+.ph .lbl{font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fw)}
+.ph .toggle-icon{font-size:10px;color:var(--muted);transition:transform .2s}
+.ph.collapsed .toggle-icon{transform:rotate(-90deg)}
+.pb{padding:11px 13px}
+.pb.hidden{display:none}
+
+label{font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fwb);
+  text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px}
+input[type=text]{width:100%;padding:6px 9px;border-radius:var(--r);
+  border:1px solid var(--border2);background:rgba(0,0,0,.3);color:var(--text);
+  font:var(--fs-sm)/1.5 var(--mono);outline:none;transition:border-color .15s}
+input[type=text]:focus{border-color:rgba(45,212,191,.4)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;
+  border-radius:999px;background:rgba(255,255,255,.1);outline:none;cursor:pointer;border:none;padding:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;
+  border-radius:50%;background:var(--accent);border:2px solid var(--bg);cursor:pointer}
+.field{display:grid;gap:4px;margin-bottom:8px}
+.btn-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+button{font:var(--fs-sm)/1 var(--sans);padding:5px 11px;border-radius:var(--r);
+  cursor:pointer;border:1px solid var(--border2);background:rgba(255,255,255,.05);
+  color:var(--text);transition:all .15s}
+button:hover{background:rgba(45,212,191,.12);border-color:rgba(45,212,191,.35);color:var(--accent)}
+button:disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
+button.primary{background:rgba(45,212,191,.15);border-color:rgba(45,212,191,.4);
+  color:var(--accent);font-weight:var(--fwb)}
+button.primary:hover{background:rgba(45,212,191,.25)}
+.presets{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.presets button{font-size:var(--fs-xs);padding:4px 9px}
+
+/* STATS */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px}
+.stat-box{padding:7px 9px;border-radius:var(--r);border:1px solid var(--border);background:rgba(0,0,0,.2)}
+.stat-box .k{font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fwb);
+  text-transform:uppercase;letter-spacing:.04em}
+.stat-box .v{font-size:var(--fs-md);font-weight:var(--fwb);font-family:var(--mono);
+  margin-top:2px;color:var(--text)}
+.stat-box.accent .v{color:var(--accent)}
+.stat-box.warn .v{color:var(--accent2)}
+.stat-box.ok .v{color:var(--ok)}
+.progress{height:3px;background:rgba(255,255,255,.06);border-radius:999px;overflow:hidden;margin:7px 0 0}
+.progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent4));transition:width .2s}
+.note{font-size:var(--fs-sm);color:var(--muted);line-height:1.55;
+  padding:7px 9px;border-radius:var(--r);background:rgba(0,0,0,.15);
+  border:1px solid var(--border);margin-top:5px}
+.note.err{background:rgba(248,113,113,.07);border-color:rgba(248,113,113,.25);color:#ffc8c0}
+.note.ok{background:rgba(52,211,153,.07);border-color:rgba(52,211,153,.25);color:#a0f0cc}
+
+/* HISTORY */
+.hist-wrap{max-height:180px;overflow-y:auto;border-radius:var(--r);border:1px solid var(--border)}
+.hist-wrap::-webkit-scrollbar{width:3px}
+.hist-wrap::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+th{padding:5px 8px;background:var(--surface2);font-size:var(--fs-xs);font-weight:var(--fwb);
+  color:var(--muted);text-align:left;text-transform:uppercase;letter-spacing:.04em;
+  position:sticky;top:0;z-index:1}
+td{padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.04);
+  vertical-align:top;font-family:var(--mono);font-size:var(--fs-sm)}
+tbody tr{cursor:pointer}
+tbody tr:hover,tbody tr.cur{background:rgba(45,212,191,.07)}
+
+/* PSEUDOCODE */
+.pseudo{display:grid;gap:2px}
+.pline{display:grid;grid-template-columns:22px 1fr;gap:5px;
+  padding:4px 7px;border-radius:5px;border:1px solid transparent;
+  font-size:var(--fs-sm);color:var(--muted);cursor:help;transition:all .12s;
+  position:relative}
+.pline:hover{background:rgba(255,255,255,.03)}
+.pline.active{background:rgba(45,212,191,.09);border-color:rgba(45,212,191,.2);color:var(--text)}
+.pline .ln{color:var(--accent2);text-align:right;font-size:10px;margin-top:1px;font-family:var(--mono)}
+.pline code{font-family:var(--mono);font-size:var(--fs-sm)}
+.tooltip{display:none;position:absolute;left:100%;top:0;z-index:50;
+  background:var(--surface3);border:1px solid var(--border2);padding:6px 10px;
+  border-radius:var(--r);font-size:var(--fs-xs);color:var(--text);white-space:nowrap;
+  pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,.5);margin-left:4px}
+.pline:hover .tooltip{display:block}
+
+/* VIZ */
+.viz-hdr{padding:8px 15px;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.legend{display:flex;flex-wrap:wrap;gap:10px}
+.legend span{display:flex;align-items:center;gap:5px;font-size:var(--fs-xs);color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.vb{padding:14px 15px}
+.svg-box{border-radius:var(--r);border:1px solid var(--border);background:rgba(2,8,18,.85);overflow:hidden}
+svg{display:block;width:100%;height:auto}
+.exp{margin-top:10px;padding:10px 13px;border-radius:var(--r);
+  background:rgba(0,0,0,.2);border:1px solid var(--border);
+  font-size:var(--fs-sm);line-height:1.65}
+.exp code{background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.15);
+  padding:1px 4px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--accent)}
+.exp b{color:var(--accent2)}
+
+/* NAIVE vs KMP COMPARISON BAR */
+.cmp-bars{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.cmp-bar-wrap{border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;background:rgba(0,0,0,.2)}
+.cmp-bar-label{font-size:var(--fs-xs);font-weight:var(--fwb);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.cmp-bar-track{height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
+.cmp-bar-fill{height:100%;border-radius:4px;transition:width .3s}
+.cmp-bar-val{font-size:var(--fs-xs);font-family:var(--mono);margin-top:4px;color:var(--muted)}
+
+/* PHASE STRIP */
+.phase-strip{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-top:10px}
+.phase-card{padding:7px 9px;border-radius:var(--r);border:1px solid var(--border);
+  background:rgba(0,0,0,.2);border-top:2px solid transparent;transition:all .2s;text-align:center}
+.phase-card.active{background:rgba(245,158,11,.07);border-top-color:var(--accent2)}
+.phase-card.done{background:rgba(52,211,153,.05);border-top-color:var(--ok)}
+.phase-card .pn{font-size:var(--fs-sm);font-weight:var(--fwb);font-family:var(--mono)}
+.phase-card .pl{font-size:9px;color:var(--muted);margin-top:2px;line-height:1.3}
+
+/* PI TABLE */
+.pi-wrap{margin-top:8px;border-radius:var(--r);border:1px solid var(--border);overflow:hidden;overflow-x:auto}
+.pi-wrap table{border-collapse:collapse;min-width:100%}
+.pi-wrap th{padding:5px 8px;background:var(--surface2);font-size:10px;font-weight:var(--fwb);
+  color:var(--muted);text-align:center;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+.pi-wrap td{padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.04);text-align:center;
+  font-family:var(--mono);font-size:var(--fs-sm);white-space:nowrap}
+.pi-wrap tr.pi-row-active td{background:rgba(45,212,191,.12);color:var(--accent);font-weight:700}
+
+/* MATCH BADGES */
+.match-badges{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.match-badge{font-size:var(--fs-xs);padding:3px 10px;border-radius:999px;
+  background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:var(--ok);
+  font-family:var(--mono)}
+
+/* EDU */
+.edu-body{font-size:var(--fs-sm);line-height:1.65;color:var(--muted)}
+.edu-body b{color:var(--accent);font-weight:var(--fwm)}
+.edu-body em{color:var(--accent2);font-style:normal}
+.key-concepts{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.concept-card{padding:8px 10px;border-radius:var(--r);border:1px solid var(--border);background:rgba(0,0,0,.2)}
+.concept-card .ck{font-size:var(--fs-xs);font-weight:var(--fwb);text-transform:uppercase;letter-spacing:.04em;color:var(--accent2);margin-bottom:3px}
+.concept-card .cv{font-size:var(--fs-xs);color:var(--muted);line-height:1.5}
+
+/* SPEED */
+.speed-row{display:flex;align-items:center;gap:9px;margin-top:5px}
+.speed-row input{flex:1}
+.speed-row span{font-size:var(--fs-sm);font-family:var(--mono);color:var(--muted);min-width:40px}
+
+footer{text-align:center;font-size:var(--fs-xs);color:var(--faint);
+  padding:8px;border-top:1px solid var(--border)}
+
+@media(max-width:980px){
+  .main{grid-template-columns:1fr}
+  .left{max-height:none;overflow-y:visible}
+  .right{max-height:none;overflow-y:visible}
+}
+@media(max-width:480px){.stat-grid{grid-template-columns:1fr 1fr}.key-concepts{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hdr">
+  <div class="hdr-title"><em>KMP</em>String Matching Algorithm</div>
+  <div class="chips">
+    <span class="chip hi">CLO-4</span>
+    <span class="chip">BSD 404 · Algorithms II</span>
+    <span class="chip">CLRS Ch. 32</span>
+    <span class="chip">Houssein Ahmed</span>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- ══════════════════════════════ LEFT PANEL (420px) ══════════════════════════════ -->
+  <aside class="left">
+
+    <!-- Controls -->
+    <div class="panel">
+      <div class="ph" onclick="togglePanel(this)">
+        Controls
+        <span class="lbl">Space=play/pause · ←/→=step · R=reset</span>
+        <span class="toggle-icon">▾</span>
+      </div>
+      <div class="pb">
+        <div class="field"><label for="in-text">Text (T)</label>
+          <input id="in-text" type="text" value="ABABDABACDABABCABAB" maxlength="60"></div>
+        <div class="field"><label for="in-pat">Pattern (P)</label>
+          <input id="in-pat" type="text" value="ABABCABAB" maxlength="30"></div>
+        <div style="margin-top:4px"><label>Presets</label>
+        <div class="presets">
+          <button data-sp="classic">Classic</button>
+          <button data-sp="simple">Simple</button>
+          <button data-sp="repeat">Repeating</button>
+          <button data-sp="dna">DNA-like</button>
+        </div></div>
+        <div style="margin-top:9px"><label>Speed (0.25× – 4×)</label>
+          <div class="speed-row">
+            <input id="speed" type="range" min="0.25" max="4" step="0.25" value="1">
+            <span id="speed-val">1.00×</span>
+          </div></div>
+        <div class="btn-row">
+          <button id="btn-build" class="primary">▶ Build Steps</button>
+          <button id="btn-step">Step →</button>
+          <button id="btn-play">▷ Play</button>
+          <button id="btn-pause">⏸ Pause</button>
+          <button id="btn-reset">↺ Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- State -->
+    <div class="panel">
+      <div class="ph" onclick="togglePanel(this)">State <span class="lbl">Live counters</span><span class="toggle-icon">▾</span></div>
+      <div class="pb">
+        <div class="stat-grid">
+          <div class="stat-box"><div class="k">Step</div><div class="v" id="counter">0 / 0</div></div>
+          <div class="stat-box"><div class="k">Status</div><div class="v" id="status">Idle</div></div>
+          <div class="stat-box"><div class="k">Phase</div><div class="v" id="s-phase">—</div></div>
+          <div class="stat-box accent"><div class="k">KMP Cmps</div><div class="v" id="s-cmp">0</div></div>
+          <div class="stat-box ok"><div class="k">Matches</div><div class="v" id="s-match">0</div></div>
+          <div class="stat-box warn"><div class="k">Naive Cmps</div><div class="v" id="s-naive">0</div></div>
+        </div>
+        <div class="progress"><div id="prog" class="progress-fill"></div></div>
+        <div class="note" id="state-note" style="margin-top:6px">Click <b>Build Steps</b> to start.</div>
+        <!-- Naive vs KMP live bar comparison -->
+        <div class="cmp-bars" id="cmp-bars" style="display:none">
+          <div class="cmp-bar-wrap">
+            <div class="cmp-bar-label" style="color:var(--accent)">KMP</div>
+            <div class="cmp-bar-track"><div class="cmp-bar-fill" id="bar-kmp" style="background:var(--accent)"></div></div>
+            <div class="cmp-bar-val" id="bar-kmp-val">0 comparisons</div>
+          </div>
+          <div class="cmp-bar-wrap">
+            <div class="cmp-bar-label" style="color:var(--accent3)">Naive</div>
+            <div class="cmp-bar-track"><div class="cmp-bar-fill" id="bar-naive" style="background:var(--accent3)"></div></div>
+            <div class="cmp-bar-val" id="bar-naive-val">0 comparisons</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- π table panel -->
+    <div class="panel">
+      <div class="ph" onclick="togglePanel(this)">Failure Function (π table) <span class="lbl">Built during preprocessing</span><span class="toggle-icon">▾</span></div>
+      <div class="pb" id="pi-panel">
+        <div class="note">π table appears after clicking Build Steps.</div>
+      </div>
+    </div>
+
+    <!-- Match results -->
+    <div class="panel">
+      <div class="ph" onclick="togglePanel(this)">Match Results <span class="lbl">All occurrences</span><span class="toggle-icon">▾</span></div>
+      <div class="pb">
+        <div id="matches-body"><div class="note">Results appear here.</div></div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="panel">
+      <div class="ph" onclick="togglePanel(this)">Step History <span class="lbl">Click row to jump</span><span class="toggle-icon">▾</span></div>
+      <div class="pb">
+        <div class="hist-wrap"><table>
+          <thead><tr><th>#</th><th>Step</th><th>Value</th></tr></thead>
+          <tbody id="history"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- Overview (collapsible) -->
+    <div class="panel">
+      <div class="ph collapsed" onclick="togglePanel(this)">
+        ▸ Overview — Step by Step
+        <span class="toggle-icon" style="transform:rotate(-90deg)">▾</span>
+      </div>
+      <div class="pb hidden">
+        <div class="edu-body">
+          <b style="color:var(--accent2)">Phase 1 — Failure Function (π table)</b><br>
+          <b>Step 1:</b> Set π[0] = 0 (first char has no proper prefix-suffix).<br>
+          <b>Step 2:</b> For i = 1 to |P|−1, pointer k tracks the current matching prefix length.<br>
+          <b>Step 3:</b> If P[i] == P[k] → π[i] = k+1 and advance both.<br>
+          <b>Step 4:</b> If P[i] ≠ P[k] and k > 0 → fall back: k = π[k−1].<br>
+          <b>Step 5:</b> If P[i] ≠ P[k] and k = 0 → π[i] = 0.<br><br>
+          <b style="color:var(--accent4)">Phase 2 — KMP Search</b><br>
+          <b>Step 6:</b> Use i for text position, q for matched character count.<br>
+          <b>Step 7:</b> If T[i] == P[q] → increment q.<br>
+          <b>Step 8:</b> If q == |P| → match found at i − |P| + 1; set q = π[q−1].<br>
+          <b>Step 9:</b> Mismatch and q > 0 → q = π[q−1]. Text pointer stays put.<br>
+          <b>Step 10:</b> Mismatch and q = 0 → advance i.
+        </div>
+      </div>
+    </div>
+
+    <!-- Worked Example (collapsible) -->
+    <div class="panel">
+      <div class="ph collapsed" onclick="togglePanel(this)">
+        ▸ Worked Example
+        <span class="toggle-icon" style="transform:rotate(-90deg)">▾</span>
+      </div>
+      <div class="pb hidden">
+        <div class="edu-body">
+          <b>Classic preset: T = "ABABDABACDABABCABAB", P = "ABABCABAB"</b><br>
+          <b>π table:</b> [0, 0, 1, 2, 0, 1, 2, 3, 4]<br>
+          π[4]=0 → "ABABC" has no proper prefix-suffix.<br>
+          π[8]=4 → "ABABCABAB" has "ABAB" as its longest proper prefix-suffix.<br><br>
+          <b>Search:</b> Pattern found at index 10 → T[10..18] = "ABABCABAB" ✓<br>
+          <b>KMP comparisons:</b> ≈27 &nbsp;|&nbsp; <b>Naive worst-case:</b> 18×9 = 162<br>
+          <b>Speedup:</b> KMP is ~6× faster on this example.
+        </div>
+      </div>
+    </div>
+
+    <!-- Naive vs KMP explanation (collapsible) -->
+    <div class="panel">
+      <div class="ph collapsed" onclick="togglePanel(this)">
+        ▸ Naive vs KMP Comparison
+        <span class="toggle-icon" style="transform:rotate(-90deg)">▾</span>
+      </div>
+      <div class="pb hidden">
+        <div class="edu-body">
+          <b>Naive search</b> compares every pattern position against every text position: O(|T|·|P|). On mismatch after k chars match, it backs up the text pointer — wasting those k comparisons.<br><br>
+          <b>KMP never backtracks the text pointer.</b> The π table lets KMP shift the pattern optimally: q = π[q−1] instead of restarting from 0. Text pointer i always advances.<br><br>
+          <b>Example:</b> Text = "AAAAAAB", Pattern = "AAAB". Naive: 16 comparisons. KMP: 7 comparisons. The π = [0,1,2,0] lets KMP skip the redundant re-comparisons.<br><br>
+          <b>Worst-case savings:</b> Pattern "AAAA" in text "AAAAAA…A": naive is O(n·m); KMP remains O(n + m).
+        </div>
+      </div>
+    </div>
+
+    <!-- Key Concepts -->
+    <div class="panel">
+      <div class="ph collapsed" onclick="togglePanel(this)">
+        ▸ Key Concepts
+        <span class="toggle-icon" style="transform:rotate(-90deg)">▾</span>
+      </div>
+      <div class="pb hidden">
+        <div class="key-concepts">
+          <div class="concept-card"><div class="ck">Failure function π</div><div class="cv">π[i] = length of longest proper prefix of P[0..i] that is also a suffix</div></div>
+          <div class="concept-card"><div class="ck">No backtracking</div><div class="cv">Text pointer i never goes back — O(|T|) scan after O(|P|) preprocessing</div></div>
+          <div class="concept-card"><div class="ck">Smart shifts</div><div class="cv">On mismatch: q = π[q−1]. Reuses match info to skip impossible alignments</div></div>
+          <div class="concept-card"><div class="ck">Total complexity</div><div class="cv">O(|P| + |T|) — linear in both input sizes, regardless of alphabet</div></div>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ══════════════════════════════ RIGHT PANEL ══════════════════════════════ -->
+  <div class="right">
+
+    <div class="viz-hdr">
+      <div class="legend">
+        <span><i class="dot" style="background:var(--accent2)"></i>Building π</span>
+        <span><i class="dot" style="background:var(--accent4)"></i>Comparing</span>
+        <span><i class="dot" style="background:var(--ok)"></i>Match</span>
+        <span><i class="dot" style="background:var(--accent3)"></i>Mismatch/Shift</span>
+        <span><i class="dot" style="background:var(--purple)"></i>Full Match</span>
+      </div>
+      <span class="lbl">KMP full pipeline</span>
+    </div>
+
+    <div class="vb">
+      <div class="svg-box"><svg id="main-svg" viewBox="0 0 960 260"></svg></div>
+      <div class="phase-strip" id="phase-strip"></div>
+      <div id="pi-vis-panel"></div>
+      <div class="exp" id="exp">Step explanation appears here.</div>
+    </div>
+
+    <div class="panel" style="border-top:1px solid var(--border)">
+      <div class="ph" onclick="togglePanel(this)">Pseudocode <span class="lbl">Hover for tooltip · Active line highlighted</span><span class="toggle-icon">▾</span></div>
+      <div class="pb"><div id="pseudo" class="pseudo"></div></div>
+    </div>
+
+    <!-- The Main Idea -->
+    <div class="panel">
+      <div class="ph" style="background:rgba(45,212,191,.05)" onclick="togglePanel(this)">
+        The Main Idea <span class="lbl">Algorithm overview</span><span class="toggle-icon">▾</span>
+      </div>
+      <div class="pb">
+        <div class="edu-body" style="font-size:var(--fs)">
+          <b>The problem.</b> Given text T (length n) and pattern P (length m), find all positions where P occurs in T. Naive search is O(n·m) — too slow for DNA sequences or search engines.<br><br>
+          <b>KMP's insight (1977).</b> When a mismatch occurs after matching k characters, we already know those k characters. The π table encodes how much of that work is reusable: the longest suffix of what we matched that is also a prefix of the pattern. We shift to that position instead of restarting.<br><br>
+          <b>Two phases.</b> Phase 1 preprocesses the pattern in O(m) time. Phase 2 scans text exactly once in O(n) time. Total: <em>O(n + m)</em> — linear in both input sizes.<br><br>
+          <b>The key invariant.</b> At every point, q characters of the pattern match text ending at position i. When T[i] ≠ P[q], set q = π[q−1] without moving i. Safe because π[q−1] gives the longest prefix of P that is also a suffix of P[0..q−1].
+        </div>
+      </div>
+    </div>
+
+    <!-- Failure Function Deep Dive -->
+    <div class="panel">
+      <div class="ph" style="background:rgba(96,165,250,.05)" onclick="togglePanel(this)">
+        Failure Function Explained <span class="lbl">How we build the π table</span><span class="toggle-icon">▾</span>
+      </div>
+      <div class="pb">
+        <div class="edu-body" style="font-size:var(--fs)">
+          <b>What is π[i]?</b> The length of the longest <em>proper</em> prefix of P[0..i] that is also a suffix of P[0..i]. "Proper" means strictly shorter than the full string.<br><br>
+          <b>Example</b> for P = "ABABCABAB":<br>
+          &nbsp;&nbsp;π[0]=0 (single char) &nbsp; π[2]=1 ("ABA"→"A") &nbsp; π[3]=2 ("ABAB"→"AB") &nbsp; π[8]=4 ("ABABCABAB"→"ABAB")<br><br>
+          <b>Why this helps.</b> When mismatch at q, T ends with P[0..q−1]. Resume at position π[q−1] in the pattern — those first π[q−1] characters are guaranteed to match.<br><br>
+          <b>Building π in O(m).</b> Pointer k can only increase m times total; each fallback decreases k. So total fallbacks ≤ total increases ≤ m → O(m) overall.
+        </div>
+      </div>
+    </div>
+
+    <!-- KMP Search Deep Dive -->
+    <div class="panel">
+      <div class="ph" style="background:rgba(45,212,191,.05)" onclick="togglePanel(this)">
+        KMP Search Explained <span class="lbl">How the search uses the π table</span><span class="toggle-icon">▾</span>
+      </div>
+      <div class="pb">
+        <div class="edu-body" style="font-size:var(--fs)">
+          <b>The scan.</b> Walk text with pointer i; track matched chars with q. Both start at 0.<br><br>
+          <b style="color:var(--accent)">1.</b> Compare T[i] with P[q].<br>
+          <b style="color:var(--accent)">2.</b> Match → increment i and q. If q == m: full match at i−m+1. Then q = π[q−1] for overlapping matches.<br>
+          <b style="color:var(--accent)">3.</b> Mismatch and q > 0 → q = π[q−1]. Don't move i. Pattern shifts right by minimum amount.<br>
+          <b style="color:var(--accent)">4.</b> Mismatch and q = 0 → advance i. No prefix matches here at all.<br><br>
+          <b>Why we never miss a match.</b> Every alignment skipped is provably impossible. The π table guarantees the shifted alignment is the next valid one.<br><br>
+          <b>Example.</b> Text "ABABDABABC", Pattern "ABABC". After "ABAB" then 'D'≠'C': π[3]=2 → restart at q=2, not q=0. Text pointer stays put. We save 2 comparisons on every such mismatch.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>BSD 404 · Algorithms II · KMP String Matching · HTML5 · CSS3 · Vanilla JS · SVG — no external libraries</footer>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const short=(s,mx=72)=>{const t=String(s).replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();return t.length>mx?t.slice(0,mx-1)+'…':t};
+
+// ─── COLLAPSIBLE PANELS ────────────────────────────────────────────────────────
+function togglePanel(ph){
+  const pb=ph.nextElementSibling;
+  const isCollapsed=ph.classList.toggle('collapsed');
+  pb.classList.toggle('hidden',isCollapsed);
+  const icon=ph.querySelector('.toggle-icon');
+  if(icon)icon.style.transform=isCollapsed?'rotate(-90deg)':'rotate(0deg)';
+}
+
+// ─── PRESETS ──────────────────────────────────────────────────────────────────
+const PRESETS={
+  classic:{text:'ABABDABACDABABCABAB',pat:'ABABCABAB'},
+  simple:{text:'AABAABAAB',pat:'AAB'},
+  repeat:{text:'AAAAAAAAAB',pat:'AAAB'},
+  dna:{text:'ATCGATCGATCG',pat:'ATCG'}
+};
+
+// ─── PSEUDOCODE ───────────────────────────────────────────────────────────────
+const PSEUDO=[
+  ['COMPUTE-PI(P):','Build the failure function (π table) for pattern P in O(|P|) time.'],
+  ['  π[0] = 0','First character always has no proper prefix-suffix → π[0]=0.'],
+  ['  k = 0','k tracks the length of the current matching prefix-suffix.'],
+  ['  for i = 1 to |P|-1:','Iterate over each remaining pattern character.'],
+  ['    while k > 0 and P[i] ≠ P[k]:','Mismatch: fall back using already-computed π values.'],
+  ['      k = π[k-1]','Jump to longest shorter prefix-suffix and retry.'],
+  ['    if P[i] == P[k]: k++','Match: extend current prefix-suffix length by one.'],
+  ['    π[i] = k','Record the prefix-suffix length for position i.'],
+  ['KMP-SEARCH(T, P):','Search for all occurrences of P in T in O(|T|) time.'],
+  ['  π = COMPUTE-PI(P)','Preprocess pattern first (called once).'],
+  ['  q = 0','q = number of pattern characters matched so far.'],
+  ['  for i = 0 to |T|-1:','Scan text left to right — text pointer NEVER backtracks.'],
+  ['    while q > 0 and T[i] ≠ P[q]:','Mismatch: use π to shift pattern intelligently.'],
+  ['      q = π[q-1]','Smart shift — reuse the already-matched prefix.'],
+  ['    if T[i] == P[q]: q++','Match: advance pattern pointer.'],
+  ['    if q == |P|:','Full pattern matched!'],
+  ['      report match at i-|P|+1','Record match position in text.'],
+  ['      q = π[q-1]','Shift to continue — enables overlapping match detection.']
+];
+
+// ─── ALGORITHM: COMPUTE PI ────────────────────────────────────────────────────
+function computePi(P){
+  const m=P.length;
+  const pi=new Array(m).fill(0);
+  let k=0;
+  for(let i=1;i<m;i++){
+    while(k>0&&P[i]!==P[k])k=pi[k-1];
+    if(P[i]===P[k])k++;
+    pi[i]=k;
+  }
+  return pi;
+}
+
+// ─── NAIVE COMPARISON COUNT (for comparison display) ─────────────────────────
+function naiveCount(T,P){
+  const n=T.length,m=P.length;
+  let cmps=0;
+  for(let i=0;i<=n-m;i++){
+    for(let j=0;j<m;j++){
+      cmps++;
+      if(T[i+j]!==P[j])break;
+    }
+  }
+  return cmps;
+}
+
+// ─── MAKE STEPS ───────────────────────────────────────────────────────────────
+function makeSteps(){
+  const T=$('in-text').value.trim().toUpperCase();
+  const P=$('in-pat').value.trim().toUpperCase();
+  if(!T)throw Error('Text cannot be empty.');
+  if(!P)throw Error('Pattern cannot be empty.');
+  if(P.length>T.length)throw Error('Pattern is longer than the text.');
+  if(P.length>30)throw Error('Pattern too long (max 30 chars).');
+  if(T.length>60)throw Error('Text too long (max 60 chars).');
+
+  const n=T.length,m=P.length;
+  const steps=[];
+  const pi=computePi(P);
+  const naiveTotal=naiveCount(T,P);
+  let totalCmp=0,matchCount=0;
+
+  // ─── PHASE 1: FAILURE FUNCTION ────────────────────────────────────────────
+  steps.push({t:'Start: Build π',h:'Build failure function',v:`Pattern: ${P}`,l:[1,2,3],
+    phase:'pi',piTable:new Array(m).fill(-1),piActive:-1,i:-1,q:-1,
+    tHighlight:[],pHighlight:[],cmp:0,matches:0,naiveCmp:naiveTotal,
+    e:`<b>Phase 1: Build the failure function π for P = "${P}".</b><br><br>
+The π table stores, for each position i, the length of the longest proper prefix of P[0..i] that is also a suffix. Built in O(|P|) = O(${m}) time using a pointer k and fallback via already-computed π values.<br><br>
+<b>Why it matters:</b> The π table is what makes KMP O(n+m) instead of O(n·m). Without it, every mismatch would force us to restart from the beginning.`});
+
+  const piB=new Array(m).fill(-1);
+  piB[0]=0;
+  steps.push({t:'π[0] = 0',h:'Initialize π[0]=0',v:`π[0]=0`,l:[2],
+    phase:'pi',piTable:[...piB],piActive:0,i:-1,q:-1,
+    tHighlight:[],pHighlight:[0],cmp:0,matches:0,naiveCmp:naiveTotal,
+    e:`<b>π[0] = 0.</b><br>P[0]='<code>${P[0]}</code>'. A single character cannot have a proper prefix-suffix (the empty string has length 0, not counted). So π[0] is always 0 by definition.`});
+
+  let k=0;
+  for(let i=1;i<m;i++){
+    let kCur=k;
+    while(kCur>0&&P[i]!==P[kCur]){
+      steps.push({t:`π fallback i=${i}`,h:`Fallback k=${kCur}→π[${kCur-1}]=${pi[kCur-1]}`,
+        v:`P[${i}]='${P[i]}' ≠ P[${kCur}]='${P[kCur]}'`,l:[5,6],
+        phase:'pi',piTable:[...piB],piActive:i,i:-1,q:-1,
+        tHighlight:[],pHighlight:[i,kCur],cmp:totalCmp,matches:0,naiveCmp:naiveTotal,
+        e:`<b>Fallback at i=${i}.</b><br>P[${i}]='<code>${P[i]}</code>' ≠ P[${kCur}]='<code>${P[kCur]}</code>'. k=${kCur}>0, so fall back: k=π[${kCur-1}]=${pi[kCur-1]}.<br><br>We try the next shorter prefix-suffix and check again.`});
+      kCur=pi[kCur-1];
+    }
+    if(P[i]===P[kCur]){
+      steps.push({t:`π[${i}] extend`,h:`P[${i}]='${P[i]}'==P[${kCur}]`,v:`k → ${kCur+1}`,l:[7],
+        phase:'pi',piTable:[...piB],piActive:i,i:-1,q:-1,
+        tHighlight:[],pHighlight:[i,kCur],cmp:totalCmp,matches:0,naiveCmp:naiveTotal,
+        e:`<b>Match at i=${i}.</b><br>P[${i}]='<code>${P[i]}</code>'==P[${kCur}]='<code>${P[kCur]}</code>'. Extend: k becomes ${kCur+1}. Prefix-suffix for P[0..${i}] has length ${kCur+1}.`});
+      kCur++;
+    }
+    piB[i]=kCur;
+    k=kCur;
+    steps.push({t:`π[${i}] = ${k}`,h:`Set π[${i}]=${k}`,v:`π[${i}]=${k}`,l:[8],
+      phase:'pi',piTable:[...piB],piActive:i,i:-1,q:-1,
+      tHighlight:[],pHighlight:[i],cmp:totalCmp,matches:0,naiveCmp:naiveTotal,
+      e:`<b>π[${i}] = ${k}.</b><br>Longest proper prefix of P[0..${i}]="<code>${P.slice(0,i+1)}</code>" that is also a suffix has length <code>${k}</code>${k>0?` → "<code>${P.slice(0,k)}</code>"`:' (none)'}.`});
+  }
+
+  steps.push({t:'π complete',h:'Failure function built',v:`[${pi.join(', ')}]`,l:[8],
+    phase:'pi',piTable:[...pi],piActive:-1,i:-1,q:-1,
+    tHighlight:[],pHighlight:[],cmp:0,matches:0,naiveCmp:naiveTotal,
+    e:`<b>Failure function complete.</b><br>π = [${pi.map(v=>`<code>${v}</code>`).join(', ')}]<br><br>Built in O(|P|)=O(${m}) time. Now using π to search T in O(|T|)=O(${n}) time.<br><b>Naive comparisons for this input: ~${naiveTotal}. KMP will use far fewer.</b>`});
+
+  // ─── PHASE 2: KMP SEARCH ──────────────────────────────────────────────────
+  steps.push({t:'Start: KMP Search',h:'Begin KMP search',v:`Scan T for P`,l:[9,10,11],
+    phase:'search',piTable:[...pi],piActive:-1,i:0,q:0,
+    tHighlight:[],pHighlight:[],cmp:0,matches:0,naiveCmp:naiveTotal,
+    e:`<b>Phase 2: KMP Search.</b><br><br>T="<code>${T}</code>" (length ${n}) &nbsp; P="<code>${P}</code>" (length ${m})<br><br>Text pointer i scans left-to-right and <b>never moves backward</b>. q tracks how many pattern chars matched at the current position. The π table handles all backtracking inside the pattern only.`});
+
+  let q=0;
+  const matchPositions=[];
+  for(let i=0;i<n;i++){
+    while(q>0&&T[i]!==P[q]){
+      const saved=q-pi[q-1];
+      steps.push({t:`Mismatch T[${i}]`,h:`Mismatch: shift via π[${q-1}]=${pi[q-1]}`,
+        v:`T[${i}]='${T[i]}' ≠ P[${q}]='${P[q]}'`,l:[13,14],
+        phase:'search',piTable:[...pi],piActive:q,i,q,
+        tHighlight:[i],pHighlight:[q],cmp:totalCmp,matches:matchCount,naiveCmp:naiveTotal,
+        e:`<b>Mismatch at T[${i}] vs P[${q}].</b><br>T[${i}]='<code>${T[i]}</code>' ≠ P[${q}]='<code>${P[q]}</code>'. q=${q}>0.<br><br>Use π: q=π[${q-1}]=${pi[q-1]}. Skip ${saved} naive re-comparisons because the first ${pi[q-1]} pattern chars are guaranteed to still match the text. Text pointer stays at i=${i}.`});
+      q=pi[q-1];
+    }
+
+    totalCmp++;
+    if(T[i]===P[q]){
+      const willMatch=(q+1===m);
+      steps.push({t:`Match T[${i}]=P[${q}]`,h:`Char match: q→${q+1}`,
+        v:`T[${i}]='${T[i]}'==P[${q}]`,l:[12,15],
+        phase:'search',piTable:[...pi],piActive:q,i,q,
+        tHighlight:[i],pHighlight:[q],cmp:totalCmp,matches:matchCount,naiveCmp:naiveTotal,
+        e:`<b>Match at T[${i}].</b><br>T[${i}]='<code>${T[i]}</code>'==P[${q}]='<code>${P[q]}</code>'. Extend: q becomes ${q+1}.${willMatch?` q==${m}=|P| → <b style="color:var(--ok)">full match found!</b>`:''}`});
+      q++;
+    } else {
+      steps.push({t:`No match T[${i}]`,h:`No match, advance i`,
+        v:`T[${i}]='${T[i]}' ≠ P[0]='${P[0]}'`,l:[12,15],
+        phase:'search',piTable:[...pi],piActive:0,i,q:0,
+        tHighlight:[i],pHighlight:[0],cmp:totalCmp,matches:matchCount,naiveCmp:naiveTotal,
+        e:`<b>No match at T[${i}].</b><br>T[${i}]='<code>${T[i]}</code>' ≠ P[0]='<code>${P[0]}</code>' and q=0. No pattern prefix matches here. Advance to T[${i+1}].`});
+    }
+
+    if(q===m){
+      matchCount++;
+      const pos=i-m+1;
+      matchPositions.push(pos);
+      steps.push({t:`MATCH @ ${pos}`,h:`Full match at index ${pos}`,
+        v:`P found at T[${pos}..${i}]`,l:[16,17,18],
+        phase:'search',piTable:[...pi],piActive:q-1,i,q,
+        tHighlight:Array.from({length:m},(_,x)=>pos+x),
+        pHighlight:Array.from({length:m},(_,x)=>x),
+        matchAt:pos,cmp:totalCmp,matches:matchCount,naiveCmp:naiveTotal,
+        e:`<b style="color:var(--ok)">✓ Full match found at index ${pos}!</b><br>T[${pos}..${i}]="<code>${T.slice(pos,pos+m)}</code>"==P="<code>${P}</code>".<br><br>Set q=π[${q-1}]=${pi[q-1]} to continue scanning for overlapping matches.`});
+      q=pi[q-1];
+    }
+  }
+
+  steps.push({t:'Search complete',h:'All matches found',v:`${matchCount} match(es)`,l:[12],
+    phase:'search',piTable:[...pi],piActive:-1,i:n,q:0,
+    tHighlight:[],pHighlight:[],cmp:totalCmp,matches:matchCount,naiveCmp:naiveTotal,
+    allDone:true,matchPositions,
+    e:`<b>KMP Search complete.</b><br>${matchCount>0?`Match position(s): ${matchPositions.map(p=>`<code>${p}</code>`).join(', ')}.`:'No matches found.'}<br><br><b>KMP comparisons:</b> ${totalCmp} &nbsp;|&nbsp; <b>Naive comparisons:</b> ${naiveTotal} &nbsp;|&nbsp; <b>Speedup:</b> ${(naiveTotal/Math.max(totalCmp,1)).toFixed(1)}×`});
+
+  return{steps,extra:{T,P,n,m,pi,matchPositions,naiveTotal}};
+}
+
+// ─── PHASES ───────────────────────────────────────────────────────────────────
+const PHASES=[
+  {id:'pi',label:'Failure Fn',sub:'O(|P|) preprocessing'},
+  {id:'search',label:'KMP Search',sub:'O(|T|) scan'}
+];
+
+// ─── SVG DRAWING ──────────────────────────────────────────────────────────────
+const CELL_BASE=28,CELL_GAP=2,START_X=14;
+
+function charColor(type){
+  return{match:'#34d399',mismatch:'#f87171',active:'#f59e0b',done:'rgba(45,212,191,.35)',
+    found:'#a78bfa',default:'rgba(255,255,255,.1)'}[type]||'rgba(255,255,255,.1)';
+}
+function charFg(type){
+  return{match:'#a7f3d0',mismatch:'#fecaca',active:'#fef3c7',found:'#ede9fe',
+    default:'#6aA8c8'}[type]||'#6a88a8';
+}
+
+function draw(cur,err){
+  if(!cur){
+    $('main-svg').innerHTML='';
+    $('phase-strip').innerHTML='';
+    $('pi-vis-panel').innerHTML='';
+    $('exp').innerHTML=`<span style="color:var(--muted)">${esc(err||'Click Build Steps to begin.')}</span>`;
+    return;
+  }
+  const ex=state.extra;
+  const T=ex.T||'';const P=ex.P||'';
+  const n=T.length,m=P.length;
+  const svg=[];
+
+  const maxLen=Math.max(n,2);
+  const availW=930;
+  const cellW=Math.min(CELL_BASE,Math.floor((availW-2*START_X)/(maxLen+1)));
+  const cellH=cellW;
+  const svgH=260;
+
+  // ─── TEXT ROW ──────────────────────────────────────────────────────────────
+  svg.push(`<text x="${START_X}" y="20" fill="rgba(90,138,170,.8)" font-size="10" font-weight="700" font-family="-apple-system,sans-serif" letter-spacing="0.07em">TEXT T</text>`);
+  for(let idx=0;idx<n;idx++){
+    const x=START_X+idx*(cellW+CELL_GAP);
+    let type='default';
+    if(cur.matchAt!==undefined&&idx>=cur.matchAt&&idx<cur.matchAt+m)type='found';
+    else if(cur.tHighlight&&cur.tHighlight.includes(idx)){
+      type=cur.i===idx?'active':'match';
+    } else if(cur.i===idx)type='active';
+    svg.push(`<rect x="${x}" y="26" width="${cellW}" height="${cellH}" rx="4" fill="${charColor(type)}"/>`);
+    svg.push(`<text x="${x+cellW/2}" y="${26+cellH*0.70}" text-anchor="middle" fill="${charFg(type)}" font-size="${Math.max(9,cellW-8)}" font-weight="700" font-family="JetBrains Mono,monospace">${esc(T[idx])}</text>`);
+    svg.push(`<text x="${x+cellW/2}" y="${26+cellH+11}" text-anchor="middle" fill="rgba(90,138,170,.4)" font-size="8" font-family="JetBrains Mono,monospace">${idx}</text>`);
+  }
+
+  // ─── PATTERN ROW (search phase) ─────────────────────────────────────────
+  // FIX: correct alignment — pattern starts at text position (i - q), i.e. the first matched character
+  if(cur.phase==='search'&&cur.i>=0&&P.length>0){
+    // The start of the current alignment window in text coordinates:
+    const alignStart=Math.max(0,cur.i-cur.q);
+    const alignX=START_X+alignStart*(cellW+CELL_GAP);
+    const rowY=26+cellH+26;
+
+    svg.push(`<text x="${alignX}" y="${rowY-6}" fill="rgba(90,138,170,.8)" font-size="10" font-weight="700" font-family="-apple-system,sans-serif" letter-spacing="0.07em">PATTERN P</text>`);
+
+    for(let pi2=0;pi2<m;pi2++){
+      const x=alignX+pi2*(cellW+CELL_GAP);
+      if(x+cellW>availW+30)continue;
+      let type='default';
+      if(cur.matchAt!==undefined){
+        type='found';
+      } else if(pi2<cur.q){
+        type='match';
+      }
+      if(cur.pHighlight&&cur.pHighlight.includes(pi2)){
+        if(pi2===cur.q&&cur.i>=0&&cur.i<T.length){
+          type=T[cur.i]===P[pi2]?'match':'mismatch';
+        } else if(pi2<cur.q){
+          type='match';
+        }
+      }
+      svg.push(`<rect x="${x}" y="${rowY}" width="${cellW}" height="${cellH}" rx="4" fill="${charColor(type)}"/>`);
+      svg.push(`<text x="${x+cellW/2}" y="${rowY+cellH*0.70}" text-anchor="middle" fill="${charFg(type)}" font-size="${Math.max(9,cellW-8)}" font-weight="700" font-family="JetBrains Mono,monospace">${esc(P[pi2])}</text>`);
+      svg.push(`<text x="${x+cellW/2}" y="${rowY+cellH+11}" text-anchor="middle" fill="rgba(90,138,170,.4)" font-size="8" font-family="JetBrains Mono,monospace">${pi2}</text>`);
+    }
+
+    // Comparison arrow between T[i] and P[q]
+    if(cur.i<n&&cur.q<m&&cur.matchAt===undefined){
+      const ax=START_X+cur.i*(cellW+CELL_GAP)+cellW/2;
+      const ay1=26+cellH+2;
+      const ay2=rowY-2;
+      const isMatch=T[cur.i]===P[cur.q];
+      const arrowColor=isMatch?'#34d399':'#f87171';
+      svg.push(`<line x1="${ax}" y1="${ay1}" x2="${ax}" y2="${ay2}" stroke="${arrowColor}" stroke-width="1.5" stroke-dasharray="3,2" opacity="0.8"/>`);
+      svg.push(`<text x="${ax+4}" y="${(ay1+ay2)/2+4}" fill="${arrowColor}" font-size="9" font-family="JetBrains Mono,monospace">${isMatch?'✓':'✗'}</text>`);
+    }
+  }
+
+  // ─── PI PHASE: show pattern only ──────────────────────────────────────────
+  if(cur.phase==='pi'&&P.length>0){
+    const rowY=26+cellH+40;
+    svg.push(`<text x="${START_X}" y="${rowY-6}" fill="rgba(90,138,170,.8)" font-size="10" font-weight="700" font-family="-apple-system,sans-serif" letter-spacing="0.07em">PATTERN P (computing π)</text>`);
+    for(let pi2=0;pi2<m;pi2++){
+      const x=START_X+pi2*(cellW+CELL_GAP);
+      let type='default';
+      if(cur.pHighlight&&cur.pHighlight.length>=2&&cur.pHighlight.includes(pi2))type='active';
+      else if(cur.piActive===pi2)type='active';
+      else if(cur.piTable&&cur.piTable[pi2]>=0)type='done';
+      svg.push(`<rect x="${x}" y="${rowY}" width="${cellW}" height="${cellH}" rx="4" fill="${charColor(type)}"/>`);
+      svg.push(`<text x="${x+cellW/2}" y="${rowY+cellH*0.70}" text-anchor="middle" fill="${charFg(type)}" font-size="${Math.max(9,cellW-8)}" font-weight="700" font-family="JetBrains Mono,monospace">${esc(P[pi2])}</text>`);
+      if(cur.piTable&&cur.piTable[pi2]>=0){
+        svg.push(`<text x="${x+cellW/2}" y="${rowY+cellH+11}" text-anchor="middle" fill="rgba(45,212,191,.6)" font-size="8" font-family="JetBrains Mono,monospace">π=${cur.piTable[pi2]}</text>`);
+      } else {
+        svg.push(`<text x="${x+cellW/2}" y="${rowY+cellH+11}" text-anchor="middle" fill="rgba(90,138,170,.3)" font-size="8" font-family="JetBrains Mono,monospace">${pi2}</text>`);
+      }
+    }
+  }
+
+  $('main-svg').innerHTML=svg.join('');
+
+  // ─── PHASE STRIP ──────────────────────────────────────────────────────────
+  const phaseHtml=PHASES.map(ph=>{
+    const isActive=cur.phase===ph.id;
+    const isDone=(ph.id==='pi'&&cur.phase==='search')||(ph.id==='search'&&cur.allDone);
+    return`<div class="phase-card ${isActive?'active':isDone?'done':''}">
+      <div class="pn">${ph.label}</div>
+      <div class="pl">${ph.sub}</div>
+    </div>`;
+  }).join('');
+  $('phase-strip').innerHTML=phaseHtml;
+
+  // ─── PI VIS PANEL (right side) ────────────────────────────────────────────
+  if(cur.piTable&&cur.piTable.some(v=>v>=0)&&P.length>0){
+    const piT=cur.piTable;
+    let html='<div class="pi-wrap" style="margin-top:10px"><table><thead>';
+    html+=`<tr><th>i</th>`;
+    for(let i=0;i<P.length;i++)html+=`<th>${i}</th>`;
+    html+=`</tr><tr><th>P[i]</th>`;
+    for(let i=0;i<P.length;i++)html+=`<th style="color:var(--accent)">${esc(P[i])}</th>`;
+    html+=`</tr></thead><tbody><tr class="${cur.phase==='pi'?'pi-row-active':''}"><th>π[i]</th>`;
+    for(let i=0;i<P.length;i++){
+      const val=piT[i]>=0?piT[i]:'?';
+      const isActive=i===cur.piActive;
+      html+=`<td style="${isActive?'color:var(--accent2);font-weight:700':'color:var(--muted)'}">${val}</td>`;
+    }
+    html+='</tr></tbody></table></div>';
+    $('pi-vis-panel').innerHTML=html;
+  } else {
+    $('pi-vis-panel').innerHTML='';
+  }
+
+  $('exp').innerHTML=cur.e;
+}
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let state={steps:[],i:0,status:'Idle',timer:null,speed:1,error:'',extra:{}};
+
+function syncBtns(){
+  const total=state.steps.length?state.steps.length-1:0;
+  const cur=state.steps[state.i];
+  $('btn-step').disabled=!cur||state.i>=total;
+  $('btn-play').disabled=!cur||state.i>=total;
+  $('btn-pause').disabled=state.status!=='Playing';
+  $('btn-reset').disabled=!cur;
+}
+
+function renderHistory(){
+  const s=Math.max(0,state.i-24);
+  $('history').innerHTML=state.steps.slice(s,state.i+1).map((x,j)=>{
+    const idx=s+j;
+    return`<tr data-i="${idx}" class="${idx===state.i?'cur':''}"><td>${idx}</td><td>${esc(x.h)}</td><td>${esc(short(x.v||''))}</td></tr>`;
+  }).join('');
+  const tbl=$('history').closest('.hist-wrap');
+  if(tbl){const cur=tbl.querySelector('tr.cur');if(cur)cur.scrollIntoView({block:'nearest'})}
+}
+
+function renderPiPanel(){
+  const ex=state.extra;
+  if(!ex.pi){$('pi-panel').innerHTML='<div class="note">π table appears after clicking Build Steps.</div>';return}
+  const P=ex.P;
+  let html='<div class="pi-wrap"><table><thead><tr><th>i</th>';
+  for(let i=0;i<P.length;i++)html+=`<th>${i}</th>`;
+  html+='</tr><tr><th>P[i]</th>';
+  for(let i=0;i<P.length;i++)html+=`<th style="color:var(--accent)">${esc(P[i])}</th>`;
+  html+='</tr></thead><tbody><tr><th>π[i]</th>';
+  for(let i=0;i<P.length;i++)html+=`<td>${ex.pi[i]}</td>`;
+  html+='</tr></tbody></table></div>';
+  html+=`<div class="note" style="margin-top:6px">π[i] = length of longest proper prefix of P[0..i] that is also a suffix. Naive comparisons for this input: <b>${ex.naiveTotal}</b>.</div>`;
+  $('pi-panel').innerHTML=html;
+}
+
+function renderMatchResults(){
+  const ex=state.extra;
+  const cur=state.steps[state.i];
+  if(!cur||!ex.matchPositions){$('matches-body').innerHTML='<div class="note">Results appear here.</div>';return}
+  // Show matches found so far (up to current step)
+  let found;
+  if(cur.allDone){
+    found=ex.matchPositions;
+  } else {
+    // Only show matches whose end position has been passed by the text pointer
+    found=ex.matchPositions.filter(pos=>pos+ex.m-1<=cur.i);
+  }
+  if(found.length===0){
+    $('matches-body').innerHTML='<div class="note">No matches found yet.</div>';return;
+  }
+  let html='<div class="match-badges">';
+  found.forEach(pos=>{html+=`<div class="match-badge">idx ${pos}: "${esc(ex.T.slice(pos,pos+ex.m))}"</div>`;});
+  html+='</div>';
+  if(cur.allDone&&ex.matchPositions.length===0)
+    html='<div class="note">No occurrences of the pattern found in the text.</div>';
+  $('matches-body').innerHTML=html;
+}
+
+function renderCompareBars(){
+  const cur=state.steps[state.i];
+  const ex=state.extra;
+  if(!cur||!ex.naiveTotal){$('cmp-bars').style.display='none';return}
+  $('cmp-bars').style.display='grid';
+  const kmpCmps=cur.cmp||0;
+  const naiveCmps=ex.naiveTotal;
+  const max=Math.max(naiveCmps,1);
+  $('bar-kmp').style.width=`${Math.min(100,kmpCmps/max*100)}%`;
+  $('bar-naive').style.width=`100%`;
+  $('bar-kmp-val').textContent=`${kmpCmps} comparisons`;
+  $('bar-naive-val').textContent=`${naiveCmps} comparisons (worst-case)`;
+}
+
+function render(){
+  const cur=state.steps[state.i]||null;
+  const total=state.steps.length?state.steps.length-1:0;
+  const pct=total>0?Math.round(state.i*100/total):0;
+  $('counter').textContent=(cur?state.i:0)+' / '+total;
+  $('status').textContent=state.status;
+  $('prog').style.width=`${pct}%`;
+  if(cur){
+    $('state-note').innerHTML=esc(cur.h);
+    $('s-phase').textContent=cur.phase==='pi'?'Failure Fn':'KMP Search';
+    $('s-cmp').textContent=cur.cmp||0;
+    $('s-match').textContent=cur.matches||0;
+    $('s-naive').textContent=state.extra.naiveTotal||0;
+  } else {
+    $('state-note').innerHTML=state.error
+      ?`<span style="color:var(--accent3)">${esc(state.error)}</span>`
+      :'Click <b>Build Steps</b> to start.';
+    $('s-phase').textContent='—';$('s-cmp').textContent=0;$('s-match').textContent=0;$('s-naive').textContent=0;
+  }
+  const ls=cur?(Array.isArray(cur.l)?cur.l:[cur.l]):[];
+  document.querySelectorAll('.pline').forEach(el=>el.classList.toggle('active',ls.includes(+el.dataset.line)));
+  syncBtns();renderHistory();renderMatchResults();renderCompareBars();draw(cur,state.error);
+}
+
+// ─── PLAYBACK ─────────────────────────────────────────────────────────────────
+function stopTimer(){if(state.timer){clearInterval(state.timer);state.timer=null}}
+
+function buildSteps(){
+  stopTimer();
+  try{
+    const out=makeSteps();
+    state.steps=out.steps;state.extra=out.extra;
+    state.i=0;state.status='Ready';state.error='';
+    renderPiPanel();
+  }catch(e){
+    state.steps=[];state.i=0;state.extra={};state.status='Idle';state.error=e.message;
+    $('pi-panel').innerHTML=`<div class="note err">${esc(e.message)}</div>`;
+  }
+  render();
+}
+
+function stepFwd(){
+  if(!state.steps.length){buildSteps();return}
+  if(state.i<state.steps.length-1){
+    state.i++;
+    state.status=state.i===state.steps.length-1?'Done':'Paused';
+  }
+  render();
+}
+
+function stepBack(){
+  if(state.i>0){
+    stopTimer();
+    state.i--;
+    state.status='Paused';
+    render();
+  }
+}
+
+function playAnim(){
+  if(!state.steps.length)buildSteps();
+  if(state.i>=state.steps.length-1)return;
+  stopTimer();state.status='Playing';render();
+  // FIX: correct interval calculation — higher speed = shorter delay
+  const delay=clamp(Math.round(900/Math.max(state.speed,0.1)),150,3000);
+  state.timer=setInterval(()=>{
+    if(state.i<state.steps.length-1){
+      state.i++;
+      if(state.i===state.steps.length-1){stopTimer();state.status='Done';render();}
+      else render();
+    }else{stopTimer();state.status='Done';render();}
+  },delay);
+}
+
+// ─── EVENT LISTENERS ──────────────────────────────────────────────────────────
+$('btn-build').onclick=buildSteps;
+$('btn-step').onclick=stepFwd;
+$('btn-play').onclick=playAnim;
+$('btn-pause').onclick=()=>{stopTimer();state.status='Paused';render()};
+$('btn-reset').onclick=()=>{stopTimer();state.i=0;state.status=state.steps.length?'Ready':'Idle';render()};
+$('speed').oninput=()=>{
+  state.speed=+$('speed').value;
+  $('speed-val').textContent=state.speed.toFixed(2)+'×';
+  if(state.status==='Playing')playAnim(); // restart with new speed
+};
+$('history').onclick=e=>{
+  const tr=e.target.closest('tr[data-i]');if(!tr)return;
+  stopTimer();state.i=clamp(+tr.dataset.i,0,state.steps.length-1);
+  state.status=state.i===state.steps.length-1?'Done':'Paused';render();
+};
+document.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{
+  const p=PRESETS[b.dataset.sp];
+  $('in-text').value=p.text;$('in-pat').value=p.pat;buildSteps();
+});
+
+// FIX: Prevent arrow keys from scrolling page; handle ← back-step correctly
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='TEXTAREA'||e.target.tagName==='INPUT')return;
+  if(e.key===' '){e.preventDefault();state.status==='Playing'?$('btn-pause').click():$('btn-play').click();}
+  if(e.key==='ArrowRight'){e.preventDefault();stepFwd();}
+  if(e.key==='ArrowLeft'){e.preventDefault();stepBack();}  // ← now steps back
+  if(e.key==='r'||e.key==='R'){e.preventDefault();$('btn-reset').click();}
+});
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+$('pseudo').innerHTML=PSEUDO.map((x,i)=>`
+  <div class="pline" data-line="${i+1}">
+    <span class="ln">${i+1}</span>
+    <code>${esc(x[0])}</code>
+    <span class="tooltip">${esc(x[1])}</span>
+  </div>`).join('');
+
+buildSteps();
+</script>
+</body>
+</html>

@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RSA Cryptography — BSD 404</title>
+<style>
+:root{
+  --bg:#0b1520;--surface:#112030;--surface2:#152840;
+  --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.13);
+  --text:#ddeeff;--muted:#6a9ab8;--faint:#3a6080;
+  --accent:#38d9c0;--accent2:#ffc94d;--accent3:#ff6b5b;--accent4:#7eb8ff;
+  --ok:#5de89a;--pink:#ff91b0;--purple:#b085f5;
+  --fs:13px;--fs-sm:12px;--fs-xs:11px;--fs-md:14px;
+  --fw:400;--fwb:700;--fwm:600;
+  --mono:'JetBrains Mono',Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --r:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);font-size:var(--fs);color:var(--text);
+  background:var(--bg);line-height:1.5;overflow-x:hidden}
+.page{display:grid;grid-template-rows:auto 1fr auto;min-height:100vh}
+.hdr{background:var(--surface);border-bottom:1px solid var(--border2);
+  padding:9px 18px;display:flex;align-items:center;justify-content:space-between;
+  gap:10px;flex-wrap:wrap}
+.hdr-title{font-size:14px;font-weight:var(--fwb);color:var(--text)}
+.hdr-title em{color:var(--accent);font-style:normal;margin-right:5px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:var(--fs-xs);padding:3px 8px;border-radius:999px;
+  background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted)}
+.chip.hi{background:rgba(56,217,192,.1);border-color:rgba(56,217,192,.25);color:var(--accent)}
+.main{display:grid;grid-template-columns:320px 1fr;min-height:0}
+.left{border-right:1px solid var(--border);display:grid;gap:0}
+.right{display:grid;gap:0}
+.panel{border-bottom:1px solid var(--border)}
+.ph{padding:7px 13px;background:var(--surface);display:flex;
+  align-items:center;justify-content:space-between;gap:8px;
+  font-size:var(--fs-sm);font-weight:var(--fwb);color:var(--text)}
+.ph .lbl{font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fw)}
+.pb{padding:11px 13px}
+label{font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fwb);
+  text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px}
+input[type=number]{width:100%;padding:6px 9px;border-radius:var(--r);
+  border:1px solid var(--border2);background:rgba(0,0,0,.3);color:var(--text);
+  font:var(--fs-sm)/1.5 var(--mono);outline:none;transition:border-color .15s}
+input[type=number]:focus{border-color:rgba(56,217,192,.4)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;
+  border-radius:999px;background:rgba(255,255,255,.1);outline:none;cursor:pointer;border:none;padding:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;
+  border-radius:50%;background:var(--accent);border:2px solid var(--bg);cursor:pointer}
+.input-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.input-grid .field{display:grid;gap:4px}
+.btn-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+button{font:var(--fs-sm)/1 var(--sans);padding:5px 11px;border-radius:var(--r);
+  cursor:pointer;border:1px solid var(--border2);background:rgba(255,255,255,.05);
+  color:var(--text);transition:all .15s}
+button:hover{background:rgba(56,217,192,.12);border-color:rgba(56,217,192,.35);color:var(--accent)}
+button:disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
+button.primary{background:rgba(56,217,192,.15);border-color:rgba(56,217,192,.4);
+  color:var(--accent);font-weight:var(--fwb)}
+button.primary:hover{background:rgba(56,217,192,.25)}
+.presets{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.presets button{font-size:var(--fs-xs);padding:4px 9px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.stat-box{padding:7px 9px;border-radius:var(--r);border:1px solid var(--border);background:rgba(0,0,0,.2)}
+.stat-box .k{font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fwb);
+  text-transform:uppercase;letter-spacing:.04em}
+.stat-box .v{font-size:var(--fs-md);font-weight:var(--fwb);font-family:var(--mono);
+  margin-top:2px;color:var(--text)}
+.progress{height:3px;background:rgba(255,255,255,.06);border-radius:999px;overflow:hidden;margin:7px 0 0}
+.progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent4));transition:width .2s}
+.note{font-size:var(--fs-sm);color:var(--muted);line-height:1.55;
+  padding:7px 9px;border-radius:var(--r);background:rgba(0,0,0,.15);
+  border:1px solid var(--border);margin-top:5px}
+.note.err{background:rgba(255,80,60,.07);border-color:rgba(255,80,60,.25);color:#ffc8c0}
+.note.ok{background:rgba(93,232,154,.07);border-color:rgba(93,232,154,.25);color:#b0f0cc}
+.hist-wrap{max-height:200px;overflow-y:auto;border-radius:var(--r);border:1px solid var(--border)}
+.hist-wrap::-webkit-scrollbar{width:3px}
+.hist-wrap::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+th{padding:5px 8px;background:var(--surface2);font-size:var(--fs-xs);font-weight:var(--fwb);
+  color:var(--muted);text-align:left;text-transform:uppercase;letter-spacing:.04em;
+  position:sticky;top:0;z-index:1}
+td{padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.04);
+  vertical-align:top;font-family:var(--mono);font-size:var(--fs-sm)}
+tbody tr{cursor:pointer}
+tbody tr:hover,tbody tr.cur{background:rgba(56,217,192,.07)}
+.pseudo{display:grid;gap:2px}
+.pline{display:grid;grid-template-columns:22px 1fr;gap:5px;
+  padding:4px 7px;border-radius:5px;border:1px solid transparent;
+  font-size:var(--fs-sm);color:var(--muted);cursor:help;transition:all .12s}
+.pline:hover{background:rgba(255,255,255,.03)}
+.pline.active{background:rgba(56,217,192,.09);border-color:rgba(56,217,192,.2);color:var(--text)}
+.pline .ln{color:var(--accent2);text-align:right;font-size:10px;margin-top:1px;font-family:var(--mono)}
+.pline code{font-family:var(--mono);font-size:var(--fs-sm)}
+.viz-hdr{padding:8px 15px;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.legend{display:flex;flex-wrap:wrap;gap:10px}
+.legend span{display:flex;align-items:center;gap:5px;font-size:var(--fs-xs);color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.vb{padding:14px 15px}
+.svg-box{border-radius:var(--r);border:1px solid var(--border);background:rgba(3,10,20,.8);overflow:hidden}
+svg{display:block;width:100%;height:auto}
+.exp{margin-top:10px;padding:10px 12px;border-radius:var(--r);
+  background:rgba(0,0,0,.2);border:1px solid var(--border);
+  font-size:var(--fs-sm);line-height:1.65}
+.exp code{background:rgba(56,217,192,.08);border:1px solid rgba(56,217,192,.15);
+  padding:1px 4px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--accent)}
+.exp b{color:var(--accent2)}
+.edu-body{font-size:var(--fs-sm);line-height:1.6;color:var(--muted)}
+.edu-body b{color:var(--accent);font-weight:var(--fwm)}
+.speed-row{display:flex;align-items:center;gap:9px;margin-top:5px}
+.speed-row input{flex:1}
+.speed-row span{font-size:var(--fs-sm);font-family:var(--mono);color:var(--muted);min-width:36px}
+.concepts{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+
+/* PHASE STRIP */
+.phase-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:10px}
+.phase-card{padding:6px 7px;border-radius:var(--r);border:1px solid var(--border);
+  background:rgba(0,0,0,.2);border-top:2px solid transparent;transition:all .2s;text-align:center}
+.phase-card.active{background:rgba(255,201,77,.07);border-color:rgba(255,201,77,.3)}
+.phase-card.done{background:rgba(93,232,154,.05);border-color:rgba(93,232,154,.2)}
+.phase-card .pn{font-size:var(--fs-sm);font-weight:var(--fwb);font-family:var(--mono)}
+.phase-card .pl{font-size:9px;color:var(--muted);margin-top:2px;line-height:1.3}
+
+/* BIT PANEL */
+.bit-strip{display:flex;gap:3px;flex-wrap:wrap;margin-top:8px}
+.bit{display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:4px 7px;border-radius:5px;border:1px solid var(--border);
+  background:rgba(0,0,0,.2);font-family:var(--mono);font-size:var(--fs-sm);
+  min-width:30px;transition:all .15s}
+.bit.active{background:rgba(255,201,77,.12);border-color:rgba(255,201,77,.4);color:var(--accent2)}
+.bit.done{background:rgba(56,217,192,.06);border-color:rgba(56,217,192,.2)}
+.bit .bi{font-size:9px;color:var(--muted)}
+
+/* EEA TABLE */
+.eea-wrap{max-height:200px;overflow-y:auto;border-radius:var(--r);border:1px solid var(--border);margin-top:8px}
+.eea-wrap::-webkit-scrollbar{width:3px}
+.eea-wrap::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+.eea-wrap table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+.eea-wrap th{padding:5px 6px;background:var(--surface2);font-size:10px;font-weight:var(--fwb);
+  color:var(--muted);text-align:center;text-transform:uppercase;letter-spacing:.03em;
+  position:sticky;top:0;z-index:1}
+.eea-wrap td{padding:4px 6px;border-bottom:1px solid rgba(255,255,255,.04);text-align:center;
+  font-family:var(--mono);font-size:var(--fs-sm)}
+.eea-wrap tr.cur{background:rgba(56,217,192,.07)}
+
+/* KEY DISPLAY */
+.key-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.key-card{padding:9px 11px;border-radius:var(--r);border:2px solid var(--border);text-align:center}
+.key-card.pub{border-color:rgba(126,184,255,.3);background:rgba(126,184,255,.05)}
+.key-card.priv{border-color:rgba(255,145,176,.3);background:rgba(255,145,176,.05)}
+.key-card .kl{font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fwb);
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.key-card .kv{font-size:var(--fs-md);font-weight:var(--fwb);font-family:var(--mono)}
+.key-card.pub .kv{color:var(--accent4)}
+.key-card.priv .kv{color:var(--pink)}
+
+footer{text-align:center;font-size:var(--fs-xs);color:var(--faint);
+  padding:8px;border-top:1px solid var(--border)}
+@media(max-width:820px){
+  .main{grid-template-columns:1fr}
+  .phase-strip{grid-template-columns:repeat(3,1fr)}
+  .concepts,.key-row{grid-template-columns:1fr}
+}
+@media(max-width:480px){.phase-strip{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hdr">
+  <div class="hdr-title"><em>RSA</em>Public-Key Cryptography</div>
+  <div class="chips">
+    <span class="chip hi">CLO-3</span>
+    <span class="chip">BSD 404 · Algorithms II</span>
+    <span class="chip">CLRS Ch. 31</span>
+    <span class="chip">Houssein Ahmed</span>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- LEFT -->
+  <aside class="left">
+
+    <div class="panel">
+      <div class="ph">Controls <span class="lbl">Space=play/pause · →=step · R=reset</span></div>
+      <div class="pb">
+        <div class="input-grid">
+          <div class="field"><label for="in-p">Prime p</label><input id="in-p" type="number" value="17" min="2"></div>
+          <div class="field"><label for="in-q">Prime q</label><input id="in-q" type="number" value="11" min="2"></div>
+          <div class="field"><label for="in-e">Public exp e</label><input id="in-e" type="number" value="7" min="2"></div>
+          <div class="field"><label for="in-m">Message m</label><input id="in-m" type="number" value="88" min="0"></div>
+        </div>
+        <div class="presets">
+          <button data-sp="classic">Classic (17,11)</button>
+          <button data-sp="balanced">Balanced (23,29)</button>
+          <button data-sp="bigger">Bigger (61,53)</button>
+          <button data-sp="small">Small (5,11)</button>
+        </div>
+        <div style="margin-top:9px"><label>Speed</label>
+          <div class="speed-row">
+            <input id="speed" type="range" min="0.25" max="4" step="0.25" value="1">
+            <span id="speed-val">1.00×</span>
+          </div></div>
+        <div class="btn-row">
+          <button id="btn-build" class="primary">Build Steps</button>
+          <button id="btn-step">Step</button>
+          <button id="btn-play">Play</button>
+          <button id="btn-pause">Pause</button>
+          <button id="btn-reset">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">State <span class="lbl">Live counters</span></div>
+      <div class="pb">
+        <div class="stat-grid">
+          <div class="stat-box"><div class="k">Step</div><div class="v" id="counter">0 / 0</div></div>
+          <div class="stat-box"><div class="k">Status</div><div class="v" id="status">Idle</div></div>
+          <div class="stat-box"><div class="k">Phase</div><div class="v" id="s-phase">—</div></div>
+          <div class="stat-box"><div class="k">n</div><div class="v" id="s-n">—</div></div>
+          <div class="stat-box"><div class="k">φ(n)</div><div class="v" id="s-phi">—</div></div>
+          <div class="stat-box"><div class="k">d</div><div class="v" id="s-d">—</div></div>
+        </div>
+        <div class="progress"><div id="prog" class="progress-fill"></div></div>
+        <div class="note" id="state-note" style="margin-top:6px">Click <b>Build Steps</b> to start.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Keys <span class="lbl">Build to compute</span></div>
+      <div class="pb" id="keys-body">
+        <div class="note">Keys appear after clicking Build Steps.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Step History <span class="lbl">Click row to jump</span></div>
+      <div class="pb">
+        <div class="hist-wrap"><table>
+          <thead><tr><th>#</th><th>Step</th><th>Value</th></tr></thead>
+          <tbody id="history"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Overview — Step by Step</div>
+      <div class="pb">
+        <div class="edu-body">
+          <b style="color:var(--accent2)">Phase 1 — Key Generation</b><br>
+          <b>Step 1:</b> Choose two distinct prime numbers <b>p</b> and <b>q</b>. In practice these are hundreds of digits long; here we use small ones to follow the math.<br>
+          <b>Step 2:</b> Compute the public modulus <b>n = p × q</b>. This value is shared publicly. Its security relies on the fact that factoring n back into p and q is computationally hard for large primes.<br>
+          <b>Step 3:</b> Compute Euler's totient <b>φ(n) = (p−1)(q−1)</b>. This counts how many integers below n are coprime to n. It is easy to compute only if you know p and q.<br>
+          <b>Step 4:</b> Choose a public exponent <b>e</b> such that 1 &lt; e &lt; φ(n) and gcd(e, φ(n)) = 1. This guarantees a modular inverse exists.<br><br>
+
+          <b style="color:var(--accent4)">Phase 2 — Extended Euclidean Algorithm</b><br>
+          <b>Step 5:</b> Run the Extended Euclidean Algorithm on e and φ(n). At each iteration, compute a quotient q, update the remainder r, and track Bézout coefficients s and t.<br>
+          <b>Step 6:</b> When the remainder reaches 0, the Bézout coefficient s gives us <b>d = e⁻¹ mod φ(n)</b> — the private exponent. Verify: e × d ≡ 1 (mod φ(n)).<br>
+          <b>Result:</b> Public key = <b style="color:var(--accent4)">(n, e)</b>, Private key = <b style="color:var(--pink)">d</b>.<br><br>
+
+          <b style="color:var(--accent)">Phase 3 — Encryption (Square-and-Multiply)</b><br>
+          <b>Step 7:</b> To encrypt a message m, compute <b>c = m<sup>e</sup> mod n</b>.<br>
+          <b>Step 8:</b> Convert the exponent e to binary. Read bits from MSB to LSB. For each bit: always <b>square</b> the running result mod n. If the bit is <b>1</b>, also <b>multiply</b> by the base m mod n.<br>
+          <b>Step 9:</b> After processing all bits, the final result is the ciphertext <b>c</b>. This runs in O(log e) multiplications instead of e multiplications.<br><br>
+
+          <b style="color:var(--ok)">Phase 4 — Decryption (Square-and-Multiply)</b><br>
+          <b>Step 10:</b> To decrypt, compute <b>m = c<sup>d</sup> mod n</b> using the same square-and-multiply method with the private exponent d.<br>
+          <b>Step 11:</b> Process each bit of d in binary (MSB to LSB): square, then conditionally multiply by c.<br>
+          <b>Step 12:</b> The final result recovers the original message <b>m</b>.<br><br>
+
+          <b style="color:var(--purple)">Why It Works — Correctness</b><br>
+          Since ed ≡ 1 (mod φ(n)), we know ed = 1 + k·φ(n) for some integer k. By Euler's theorem, m<sup>φ(n)</sup> ≡ 1 (mod n) when gcd(m, n) = 1. Therefore: m<sup>ed</sup> = m<sup>1+k·φ(n)</sup> = m · (m<sup>φ(n)</sup>)<sup>k</sup> ≡ m · 1<sup>k</sup> ≡ <b>m</b> (mod n). Decryption always recovers the original message.
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Worked Example</div>
+      <div class="pb">
+        <div class="edu-body">
+          <b>Classic preset: p=17, q=11, e=7, m=88.</b><br>
+          n = 17×11 = 187, φ(n) = 16×10 = 160.<br>
+          EEA finds d = 23 (since 7×23 = 161 ≡ 1 mod 160).<br>
+          Encrypt: 88⁷ mod 187 = 11.<br>
+          Decrypt: 11²³ mod 187 = 88. ✓
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Key Concepts</div>
+      <div class="pb">
+        <div class="concepts">
+          <div class="stat-box"><div class="k">Euler's theorem</div><div style="font-size:var(--fs-sm);margin-top:3px;color:var(--muted)">m<sup>φ(n)</sup> ≡ 1 mod n guarantees decryption recovers m</div></div>
+          <div class="stat-box"><div class="k">Extended Euclid</div><div style="font-size:var(--fs-sm);margin-top:3px;color:var(--muted)">Computes d = e⁻¹ mod φ(n) in O(log n) steps</div></div>
+          <div class="stat-box"><div class="k">Square-and-multiply</div><div style="font-size:var(--fs-sm);margin-top:3px;color:var(--muted)">Fast modular exponentiation in O(log exponent) time</div></div>
+          <div class="stat-box"><div class="k">Security basis</div><div style="font-size:var(--fs-sm);margin-top:3px;color:var(--muted)">Factoring n into p×q is computationally infeasible for large primes</div></div>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- RIGHT -->
+  <div class="right">
+
+    <div class="viz-hdr">
+      <div class="legend">
+        <span><i class="dot" style="background:var(--accent2)"></i>Key Generation</span>
+        <span><i class="dot" style="background:var(--accent4)"></i>Extended Euclid</span>
+        <span><i class="dot" style="background:var(--accent)"></i>Encryption</span>
+        <span><i class="dot" style="background:var(--ok)"></i>Decryption</span>
+      </div>
+      <span class="lbl">Full RSA pipeline</span>
+    </div>
+
+    <div class="vb">
+      <div class="svg-box"><svg id="main-svg" viewBox="0 0 960 320"></svg></div>
+      <div class="phase-strip" id="phase-strip"></div>
+      <div id="eea-panel"></div>
+      <div id="bit-panel"></div>
+      <div class="exp" id="exp">Step explanation appears here.</div>
+    </div>
+
+    <div class="panel" style="border-top:1px solid var(--border)">
+      <div class="ph">Pseudocode <span class="lbl">Hover line for tooltip · Active line highlighted</span></div>
+      <div class="pb"><div id="pseudo" class="pseudo"></div></div>
+    </div>
+
+    <!-- The Main Idea -->
+    <div class="panel">
+      <div class="ph" style="background:rgba(56,217,192,.06)">The Main Idea <span class="lbl">Algorithm overview</span></div>
+      <div class="pb">
+        <div class="edu-body" style="font-size:var(--fs)">
+          <b>The problem.</b> Two people who have never met need to communicate securely over a public channel — without sharing a secret in advance.<br><br>
+          <b>RSA's insight (1977).</b> Each person has two keys: a <b style="color:var(--accent4)">public key</b> shared with everyone, and a <b style="color:var(--pink)">private key</b> kept secret. Encrypt with the public key, only the private key owner can decrypt.<br><br>
+          <b>The hard problem.</b> Multiplying two large primes is easy: p × q = n. But given only n, finding p and q is computationally infeasible for large primes. This one-way difficulty is the entire security foundation.<br><br>
+          <b>The chain.</b> Public key → n and e. To find private key d, you need φ(n). To find φ(n), you need p and q. To find p and q, you must factor n. If factoring n is hard, d stays secret and RSA is secure.<br><br>
+          <b>The pipeline.</b> This tool walks through the full RSA process: <b style="color:var(--accent2)">Key Generation</b> → <b style="color:var(--accent4)">Extended Euclidean Algorithm</b> → <b style="color:var(--accent)">Encryption</b> → <b style="color:var(--ok)">Decryption</b>. Each phase is animated step by step so you can follow every calculation.
+        </div>
+      </div>
+    </div>
+
+    <!-- Extended Euclidean Algorithm Explanation -->
+    <div class="panel">
+      <div class="ph" style="background:rgba(126,184,255,.06)">Extended Euclidean Algorithm <span class="lbl">How we find the private key d</span></div>
+      <div class="pb">
+        <div class="edu-body" style="font-size:var(--fs)">
+          <b>The goal.</b> We need to find <b style="color:var(--pink)">d</b> such that <b>e × d ≡ 1 (mod φ(n))</b>. In other words, d is the modular inverse of e — the number that, when multiplied by e, gives a remainder of 1 when divided by φ(n).<br><br>
+
+          <b>Why not just divide?</b> In normal math, the inverse of 7 is 1/7. But in modular arithmetic there are no fractions — we need a whole number d. Trying every number from 1 to φ(n) would work but is far too slow for large values. The Extended Euclidean Algorithm finds d efficiently in O(log n) steps.<br><br>
+
+          <b>How it works — simple version.</b> Start with two numbers: e and φ(n). The algorithm repeatedly divides the larger by the smaller, keeping track of remainders and two extra coefficients (s and t) at each step:<br><br>
+
+          <b style="color:var(--accent4)">1.</b> Divide e by φ(n) (or vice versa) — record the quotient q and remainder r.<br>
+          <b style="color:var(--accent4)">2.</b> Replace the larger number with the remainder. Update the coefficients s and t using the quotient.<br>
+          <b style="color:var(--accent4)">3.</b> Repeat until the remainder hits 0.<br>
+          <b style="color:var(--accent4)">4.</b> The coefficient s from the last nonzero row gives us d (adjusted to be positive mod φ(n)).<br><br>
+
+          <b>Why does this work?</b> The algorithm maintains the identity: <b>e × s + φ(n) × t = r</b> at every step. When the remainder reaches 0, the previous remainder is gcd(e, φ(n)) = 1. So we get e × s + φ(n) × t = 1, which means e × s ≡ 1 (mod φ(n)). That s is our d.<br><br>
+
+          <b>Example.</b> With e = 7 and φ(n) = 160: the algorithm runs a few division steps and finds s = 23. Check: 7 × 23 = 161 = 1 × 160 + 1, so 161 mod 160 = 1. ✓ Therefore d = 23.
+        </div>
+      </div>
+    </div>
+
+    <!-- Square-and-Multiply Explanation -->
+    <div class="panel">
+      <div class="ph" style="background:rgba(56,217,192,.06)">Square-and-Multiply Method <span class="lbl">How we encrypt and decrypt efficiently</span></div>
+      <div class="pb">
+        <div class="edu-body" style="font-size:var(--fs)">
+          <b>The problem.</b> To encrypt, we compute m<sup>e</sup> mod n. To decrypt, c<sup>d</sup> mod n. Even with small numbers like 88<sup>7</sup>, the raw result is enormous (88⁷ = 40,867,559,636,992). For real RSA with 2048-bit keys, computing this the naive way (multiplying m by itself e times) is impossible.<br><br>
+
+          <b>The trick.</b> Instead of e multiplications, we only need <b>O(log e)</b> — that is, roughly the number of binary digits in e. For e = 7 that is just 3 steps instead of 7. For a 2048-bit exponent, that is ~2048 steps instead of 2<sup>2048</sup>.<br><br>
+
+          <b>How it works — step by step.</b><br><br>
+
+          <b style="color:var(--accent)">1.</b> Write the exponent in binary. For example, e = 7 → <b>111</b> in binary.<br>
+          <b style="color:var(--accent)">2.</b> Start with result = 1. Read the binary bits from left to right (MSB to LSB).<br>
+          <b style="color:var(--accent)">3.</b> For each bit, do two things:<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;— <b>Always square:</b> result = result² mod n<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;— <b>If the bit is 1:</b> also multiply: result = result × base mod n<br>
+          <b style="color:var(--accent)">4.</b> After processing all bits, result holds the final answer.<br><br>
+
+          <b>Why mod at every step?</b> By taking mod n after each operation, the numbers never grow larger than n². Without this, 88⁷ would be a 14-digit number — and real RSA exponents produce numbers with millions of digits. Reducing mod n at each step keeps the numbers small and manageable.<br><br>
+
+          <b>Example.</b> Compute 88⁷ mod 187. Exponent 7 in binary = 111.<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;Bit 0 (1): square → 1, multiply → 1 × 88 = 88 mod 187 = <b>88</b><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;Bit 1 (1): square → 88² = 7744 mod 187 = <b>77</b>, multiply → 77 × 88 = 6776 mod 187 = <b>11</b><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;Bit 2 (1): square → 11² = 121 mod 187 = <b>121</b>, multiply → 121 × 88 = 10648 mod 187 = <b>11</b><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;Result: 88⁷ mod 187 = <b style="color:var(--ok)">11</b>. Done in just 3 steps.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<footer>BSD 404 · Algorithms II · RSA Public-Key Cryptography · HTML5 · CSS3 · Vanilla JS · SVG — no external libraries</footer>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const fmt=v=>String(v);
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const short=(s,mx=80)=>{const t=String(s).replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();return t.length>mx?t.slice(0,mx-1)+'…':t};
+
+// ─── PRESETS ──────────────────────────────────────────────────────────────────
+const PRESETS={
+  classic:{p:17,q:11,e:7,m:88},
+  balanced:{p:23,q:29,e:3,m:42},
+  bigger:{p:61,q:53,e:17,m:123},
+  small:{p:5,q:11,e:3,m:9}
+};
+
+// ─── PSEUDOCODE ───────────────────────────────────────────────────────────────
+const PSEUDO=[
+  ['RSA_KEYGEN(p, q, e):','Entry point: generate RSA keys from two primes.'],
+  ['  n = p × q','Compute the public modulus.'],
+  ['  φ(n) = (p-1)(q-1)','Compute Euler\'s totient — needed for finding d.'],
+  ['  verify gcd(e, φ(n)) == 1','Confirm e is coprime with φ(n), so inverse exists.'],
+  ['  d = EXT_EUCLID(e, φ(n))','Run Extended Euclidean Algorithm to find d = e⁻¹ mod φ(n).'],
+  ['  return (n,e) as public, d as private','The two keys are now ready.'],
+  ['ENCRYPT(m, e, n):','Encryption function.'],
+  ['  c = SQUARE_AND_MULTIPLY(m, e, n)','Compute c = mᵉ mod n efficiently.'],
+  ['  return c','Ciphertext is sent over public channel.'],
+  ['DECRYPT(c, d, n):','Decryption function.'],
+  ['  m = SQUARE_AND_MULTIPLY(c, d, n)','Compute m = cᵈ mod n to recover original message.'],
+  ['  return m','Plaintext is recovered.'],
+  ['SQUARE_AND_MULTIPLY(base, exp, mod):','Fast modular exponentiation core.'],
+  ['  for each bit of exp (MSB to LSB):','Read binary representation left to right.'],
+  ['    result = result² mod mod','Always square.'],
+  ['    if bit == 1: result = result × base mod mod','Multiply by base only when bit is 1.']
+];
+
+// ─── MATH HELPERS ─────────────────────────────────────────────────────────────
+function isPrime(n){
+  if(n<2)return false;if(n<4)return true;if(n%2===0||n%3===0)return false;
+  for(let i=5;i*i<=n;i+=6)if(n%i===0||n%(i+2)===0)return false;return true;
+}
+function gcd(a,b){while(b){[a,b]=[b,a%b]}return a}
+function extEuclid(a,b){
+  let old_r=a,r=b,old_s=1,s=0,old_t=0,t=1;
+  const rows=[{q:'—',r:old_r,s:old_s,t:old_t},{q:'—',r,s,t}];
+  while(r!==0){
+    const q=Math.floor(old_r/r);
+    [old_r,r]=[r,old_r-q*r];
+    [old_s,s]=[s,old_s-q*s];
+    [old_t,t]=[t,old_t-q*t];
+    rows.push({q,r,s,t});
+  }
+  return{gcd:old_r,x:old_s,y:old_t,rows};
+}
+function modPow(base,exp,mod){
+  if(mod===1)return{result:0,bits:[],steps:[]};
+  let result=1;base=((base%mod)+mod)%mod;
+  const bits=[];let e=exp;
+  while(e>0){bits.push(e&1);e>>=1}
+  bits.reverse();
+  const steps=[];
+  for(let i=0;i<bits.length;i++){
+    result=(result*result)%mod;
+    const afterSq=result;
+    if(bits[i]===1){result=(result*base)%mod}
+    steps.push({bit:bits[i],idx:i,afterSq,afterMul:result});
+  }
+  return{result,bits,steps};
+}
+
+// ─── PHASES ───────────────────────────────────────────────────────────────────
+const PHASES=[
+  {id:'keygen',label:'Key Gen',color:'#ffc94d'},
+  {id:'eea',label:'Ext. Euclid',color:'#7eb8ff'},
+  {id:'encrypt',label:'Encrypt',color:'#38d9c0'},
+  {id:'decrypt',label:'Decrypt',color:'#5de89a'}
+];
+
+// ─── MAKE STEPS ───────────────────────────────────────────────────────────────
+function makeSteps(){
+  const p=+$('in-p').value,q=+$('in-q').value,e=+$('in-e').value,m=+$('in-m').value;
+  if(!isPrime(p))throw Error(`p = ${p} is not prime.`);
+  if(!isPrime(q))throw Error(`q = ${q} is not prime.`);
+  if(p===q)throw Error('p and q must be different primes.');
+  const n=p*q,phi=(p-1)*(q-1);
+  if(e<2||e>=phi)throw Error(`e must be between 2 and φ(n)-1 = ${phi-1}.`);
+  if(gcd(e,phi)!==1)throw Error(`gcd(${e}, ${phi}) ≠ 1. Choose e coprime with φ(n).`);
+  if(m<0||m>=n)throw Error(`Message m must be between 0 and n-1 = ${n-1}.`);
+
+  const steps=[];
+  let phasesDone={};
+
+  // ─── KEY GENERATION ─────────────────────────────────────────────────────────
+  steps.push({t:'Choose primes',h:'p, q chosen',v:`p=${p}, q=${q}`,l:[1],
+    phase:'keygen',s:{phase:'Key Gen',n:'—',phi:'—',d:'—'},
+    e:`<b>Step 1: Choose two primes.</b><br>p = <code>${p}</code>, q = <code>${q}</code>.<br><br>In a real system these would have hundreds of digits. Here we keep them small so we can follow every calculation by hand.`});
+
+  steps.push({t:'Compute n',h:'n = p×q',v:`n=${n}`,l:[2],
+    phase:'keygen',s:{phase:'Key Gen',n,phi:'—',d:'—'},
+    e:`<b>Step 2: Compute the public modulus.</b><br>n = p × q = ${p} × ${q} = <code>${n}</code>.<br><br>This number n is public — everyone can see it. The key insight: if you only know n = ${n}, finding the original p and q requires factoring n, which is hard for large numbers.`});
+
+  steps.push({t:'Compute φ(n)',h:'φ(n)',v:`φ=${phi}`,l:[3],
+    phase:'keygen',s:{phase:'Key Gen',n,phi,d:'—'},
+    e:`<b>Step 3: Compute Euler's totient.</b><br>φ(n) = (p−1)(q−1) = ${p-1} × ${q-1} = <code>${phi}</code>.<br><br>φ(n) counts how many integers below n are coprime to n. This value is only easy to compute if you know p and q separately. Without the factorization, computing φ(n) from n alone is as hard as factoring n.`});
+
+  steps.push({t:'Validate e',h:'gcd check',v:`gcd(${e},${phi})=1 ✓`,l:[4],
+    phase:'keygen',s:{phase:'Key Gen',n,phi,d:'—'},
+    e:`<b>Step 4: Validate public exponent.</b><br>e = <code>${e}</code>. We check gcd(${e}, ${phi}) = <code>${gcd(e,phi)}</code> = 1 ✓.<br><br>For RSA to work, e must be coprime with φ(n) so that a modular inverse d exists. If the gcd were not 1, we would need a different e.`});
+
+  // ─── EXTENDED EUCLIDEAN ─────────────────────────────────────────────────────
+  const eea=extEuclid(e,phi);
+  let d=((eea.x%phi)+phi)%phi;
+
+  // Add EEA rows as steps
+  for(let i=2;i<eea.rows.length;i++){
+    const row=eea.rows[i];
+    steps.push({t:`EEA row ${i-1}`,h:`EEA step ${i-1}`,v:`q=${row.q}, r=${row.r}`,l:[5],
+      phase:'eea',s:{phase:'Ext. Euclid',n,phi,d:'...'},
+      eeaIdx:i,eeaRows:eea.rows,
+      e:`<b>Extended Euclidean — iteration ${i-1}.</b><br>Quotient q = <code>${row.q}</code>. New remainder r = <code>${row.r}</code>. Bézout coefficient s = <code>${row.s}</code>.<br><br>The algorithm updates remainders and Bézout coefficients at each step until the remainder reaches 0. The last nonzero remainder is the gcd.`});
+  }
+
+  steps.push({t:'Recover d',h:'d found',v:`d=${d}`,l:[6],
+    phase:'keygen',s:{phase:'Key Gen',n,phi,d},
+    eeaIdx:eea.rows.length-1,eeaRows:eea.rows,
+    e:`<b>Step 5: Private exponent found.</b><br>d = <code>${d}</code>.<br><br>Verification: e × d = ${e} × ${d} = ${e*d}, and ${e*d} mod ${phi} = <code>${(e*d)%phi}</code> = 1 ✓.<br><br>Public key: <b style="color:var(--accent4)">(n=${n}, e=${e})</b> — shared with everyone.<br>Private key: <b style="color:var(--pink)">d=${d}</b> — kept secret.<br><br>To find d, you need φ(n). To find φ(n), you need to factor n. That chain is what protects RSA.`});
+  phasesDone.keygen=true;phasesDone.eea=true;
+
+  // ─── ENCRYPTION ─────────────────────────────────────────────────────────────
+  const enc=modPow(m,e,n);
+  const c=enc.result;
+
+  steps.push({t:'Encrypt start',h:'Encrypt setup',v:`${m}^${e} mod ${n}`,l:[7,8],
+    phase:'encrypt',s:{phase:'Encrypt',n,phi,d},encBits:enc.bits,encStep:-1,
+    e:`<b>Encryption: c = m<sup>e</sup> mod n = ${m}<sup>${e}</sup> mod ${n}.</b><br><br>We use square-and-multiply to compute this efficiently. The exponent ${e} in binary is <code>${enc.bits.join('')}</code> (${enc.bits.length} bits). The algorithm reads bits left to right — it always squares, and only multiplies by the base when the bit is 1.`});
+  phasesDone.encrypt='active';
+
+  for(let i=0;i<enc.steps.length;i++){
+    const st=enc.steps[i];
+    const action=st.bit===1?`Square → ${st.afterSq}, then multiply by ${m} → ${st.afterMul}`:`Square → ${st.afterSq} (bit=0, no multiply)`;
+    steps.push({t:`Enc bit ${i}`,h:`Bit ${i}: ${st.bit}`,v:`result=${st.afterMul}`,l:[14,15,16],
+      phase:'encrypt',s:{phase:'Encrypt',n,phi,d},encBits:enc.bits,encStep:i,
+      e:`<b>Encryption — bit ${i} (${st.bit}).</b><br>${action}.<br>Running result = <code>${st.afterMul}</code>.`});
+  }
+
+  steps.push({t:'Ciphertext',h:'c found',v:`c=${c}`,l:[9],
+    phase:'encrypt',s:{phase:'Encrypt',n,phi,d},encBits:enc.bits,encStep:enc.steps.length,
+    e:`<b>Encryption complete.</b><br>Ciphertext c = <code>${c}</code>.<br><br>The message m = ${m} has been encrypted to c = ${c} using the public key (${n}, ${e}). This ciphertext can be sent over any public channel.`});
+  phasesDone.encrypt=true;
+
+  // ─── DECRYPTION ─────────────────────────────────────────────────────────────
+  const dec=modPow(c,d,n);
+  const mRecovered=dec.result;
+
+  steps.push({t:'Decrypt start',h:'Decrypt setup',v:`${c}^${d} mod ${n}`,l:[10,11],
+    phase:'decrypt',s:{phase:'Decrypt',n,phi,d},decBits:dec.bits,decStep:-1,
+    e:`<b>Decryption: m = c<sup>d</sup> mod n = ${c}<sup>${d}</sup> mod ${n}.</b><br><br>Same square-and-multiply algorithm. Exponent d = ${d} in binary is <code>${dec.bits.join('')}</code> (${dec.bits.length} bits).`});
+  phasesDone.decrypt='active';
+
+  for(let i=0;i<dec.steps.length;i++){
+    const st=dec.steps[i];
+    const action=st.bit===1?`Square → ${st.afterSq}, then multiply by ${c} → ${st.afterMul}`:`Square → ${st.afterSq} (bit=0, no multiply)`;
+    steps.push({t:`Dec bit ${i}`,h:`Bit ${i}: ${st.bit}`,v:`result=${st.afterMul}`,l:[14,15,16],
+      phase:'decrypt',s:{phase:'Decrypt',n,phi,d},decBits:dec.bits,decStep:i,
+      e:`<b>Decryption — bit ${i} (${st.bit}).</b><br>${action}.<br>Running result = <code>${st.afterMul}</code>.`});
+  }
+
+  const correct=mRecovered===m;
+  steps.push({t:'Plaintext',h:'m recovered',v:`m=${mRecovered}`,l:[12],
+    phase:'decrypt',s:{phase:'Decrypt',n,phi,d},decBits:dec.bits,decStep:dec.steps.length,
+    e:`<b>Decryption complete.</b><br>Recovered m = <code>${mRecovered}</code>.<br><br>${correct?`<span style="color:var(--ok)">✓ Matches original message m = ${m}. Encryption and decryption are correct.</span>`:`<span style="color:var(--accent3)">⚠ Mismatch — expected ${m}, got ${mRecovered}.</span>`}<br><br>This works because e×d ≡ 1 mod φ(n), so m<sup>ed</sup> ≡ m<sup>1</sup> ≡ m (mod n) by Euler's theorem.`});
+  phasesDone.decrypt=true;
+
+  // Tag each step with phasesDone snapshot
+  const phaseFinal={};
+  steps.forEach(s=>{
+    if(!phaseFinal[s.phase])phaseFinal[s.phase]='done';
+  });
+
+  return{steps,extra:{p,q,n,phi,e,d,c,m,mRecovered}};
+}
+
+// ─── SVG DRAWING ──────────────────────────────────────────────────────────────
+function draw(cur,err){
+  if(!cur){
+    $('main-svg').innerHTML='';$('phase-strip').innerHTML='';$('eea-panel').innerHTML='';$('bit-panel').innerHTML='';
+    $('exp').innerHTML=`<span style="color:var(--muted)">${esc(err||'Click Build Steps to begin.')}</span>`;
+    return;
+  }
+  const svg=[];
+  const phase=cur.phase;
+
+  // Phase-dependent main visualization
+  if(phase==='keygen'||phase==='eea'){
+    // Show key parameters as large blocks
+    const ex=state.extra;
+    const items=[
+      {label:'p',val:ex.p,color:'#ffc94d',x:40},
+      {label:'q',val:ex.q,color:'#ffc94d',x:170},
+      {label:'n = p×q',val:ex.n,color:'#7eb8ff',x:320},
+      {label:'φ(n)',val:ex.phi,color:'#b085f5',x:490},
+      {label:'e',val:ex.e,color:'#38d9c0',x:640},
+      {label:'d',val:cur.s.d==='—'||cur.s.d==='...'?'?':cur.s.d,color:'#ff91b0',x:790}
+    ];
+    items.forEach(it=>{
+      const known=it.val!=='?';
+      svg.push(`<rect x="${it.x}" y="80" width="110" height="90" rx="12"
+        fill="${known?'rgba(255,255,255,.04)':'rgba(255,255,255,.02)'}"
+        stroke="${known?it.color:'rgba(255,255,255,.1)'}" stroke-width="${known?1.5:1}" stroke-opacity=".6"/>`);
+      svg.push(`<text x="${it.x+55}" y="110" text-anchor="middle" fill="${it.color}" font-size="11" font-weight="700" font-family="-apple-system,sans-serif" opacity=".8">${esc(it.label)}</text>`);
+      svg.push(`<text x="${it.x+55}" y="148" text-anchor="middle" fill="${known?'#ddeeff':'rgba(255,255,255,.25)'}" font-size="${String(it.val).length>4?'16':'22'}" font-weight="700" font-family="JetBrains Mono,monospace">${esc(String(it.val))}</text>`);
+    });
+    // arrows
+    svg.push(`<text x="140" y="130" fill="rgba(255,255,255,.2)" font-size="20">×</text>`);
+    svg.push(`<text x="280" y="130" fill="rgba(255,255,255,.2)" font-size="20">→</text>`);
+    svg.push(`<text x="450" y="130" fill="rgba(255,255,255,.2)" font-size="20">→</text>`);
+    svg.push(`<text x="610" y="130" fill="rgba(255,255,255,.2)" font-size="20">→</text>`);
+    svg.push(`<text x="760" y="130" fill="rgba(255,255,255,.2)" font-size="20">→</text>`);
+    // footer
+    svg.push(`<text x="40" y="220" fill="rgba(106,154,184,.5)" font-size="11">Key generation pipeline: primes → modulus → totient → public exponent → private exponent</text>`);
+    $('main-svg').setAttribute('viewBox','0 0 960 240');
+  } else if(phase==='encrypt'||phase==='decrypt'){
+    const isEnc=phase==='encrypt';
+    const ex=state.extra;
+    const base=isEnc?(ex.m??'m'):(ex.c??'c');
+    const exp=isEnc?ex.e:ex.d;
+    const mod=ex.n;
+    const res=isEnc?(cur.t==='Ciphertext'?ex.c:'...'):( cur.t==='Plaintext'?ex.mRecovered:'...');
+    // Show base^exp mod n = result
+    const col=isEnc?'#38d9c0':'#5de89a';
+    svg.push(`<rect x="60" y="60" width="180" height="100" rx="14" fill="rgba(255,255,255,.03)" stroke="${col}" stroke-width="1.5" stroke-opacity=".5"/>`);
+    svg.push(`<text x="150" y="95" text-anchor="middle" fill="${col}" font-size="11" font-weight="700">BASE</text>`);
+    svg.push(`<text x="150" y="135" text-anchor="middle" fill="#ddeeff" font-size="28" font-weight="700" font-family="JetBrains Mono,monospace">${esc(String(base))}</text>`);
+
+    svg.push(`<rect x="300" y="60" width="140" height="100" rx="14" fill="rgba(255,255,255,.03)" stroke="${col}" stroke-width="1.5" stroke-opacity=".5"/>`);
+    svg.push(`<text x="370" y="95" text-anchor="middle" fill="${col}" font-size="11" font-weight="700">EXPONENT</text>`);
+    svg.push(`<text x="370" y="135" text-anchor="middle" fill="#ddeeff" font-size="28" font-weight="700" font-family="JetBrains Mono,monospace">${esc(String(exp))}</text>`);
+
+    svg.push(`<rect x="500" y="60" width="140" height="100" rx="14" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.15)" stroke-width="1"/>`);
+    svg.push(`<text x="570" y="95" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="700">MOD</text>`);
+    svg.push(`<text x="570" y="135" text-anchor="middle" fill="#ddeeff" font-size="28" font-weight="700" font-family="JetBrains Mono,monospace">${esc(String(mod))}</text>`);
+
+    svg.push(`<text x="680" y="120" fill="rgba(255,255,255,.3)" font-size="30">=</text>`);
+
+    svg.push(`<rect x="720" y="60" width="180" height="100" rx="14" fill="${res!=='...'?'rgba(93,232,154,.06)':'rgba(255,255,255,.02)'}" stroke="${res!=='...'?'var(--ok)':'rgba(255,255,255,.1)'}" stroke-width="1.5" stroke-opacity=".6"/>`);
+    svg.push(`<text x="810" y="95" text-anchor="middle" fill="${res!=='...'?'var(--ok)':'var(--muted)'}" font-size="11" font-weight="700">RESULT</text>`);
+    svg.push(`<text x="810" y="135" text-anchor="middle" fill="${res!=='...'?'#ddeeff':'rgba(255,255,255,.25)'}" font-size="28" font-weight="700" font-family="JetBrains Mono,monospace">${esc(String(res))}</text>`);
+
+    svg.push(`<text x="60" y="210" fill="rgba(106,154,184,.5)" font-size="11">${isEnc?'Encryption':'Decryption'}: ${base}^${exp} mod ${mod}${res!=='...'?' = '+res:''} — square-and-multiply reads binary bits left to right</text>`);
+    $('main-svg').setAttribute('viewBox','0 0 960 225');
+  }
+
+  $('main-svg').innerHTML=svg.join('');
+
+  // Phase strip
+  $('phase-strip').innerHTML=PHASES.map(ph=>{
+    const isActive=cur.phase===ph.id;
+    // Check if phase is done by checking if we've passed it
+    const curIdx=state.steps.indexOf(cur);
+    const lastOfPhase=[...state.steps].reverse().find(s=>s.phase===ph.id);
+    const lastIdx=state.steps.indexOf(lastOfPhase);
+    const isDone=curIdx>lastIdx&&lastIdx>=0;
+    return`<div class="phase-card ${isActive?'active':''} ${isDone?'done':''}" style="border-top-color:${ph.color}">
+<div class="pn" style="color:${isActive?'#ffc94d':isDone?'var(--ok)':'var(--text)'}">${ph.label}</div>
+<div class="pl">${isDone?'Complete':isActive?'Active':'Pending'}</div>
+</div>`;}).join('');
+
+  // EEA table
+  if(cur.eeaRows){
+    const rows=cur.eeaRows;
+    const activeIdx=cur.eeaIdx||0;
+    let html='<div class="eea-wrap"><table><thead><tr><th>i</th><th>q</th><th>r</th><th>s (x)</th><th>t (y)</th></tr></thead><tbody>';
+    for(let i=0;i<=Math.min(activeIdx,rows.length-1);i++){
+      const r=rows[i];
+      html+=`<tr class="${i===activeIdx?'cur':''}"><td>${i}</td><td>${r.q}</td><td>${r.r}</td><td>${r.s}</td><td>${r.t}</td></tr>`;
+    }
+    html+='</tbody></table></div>';
+    $('eea-panel').innerHTML=html;
+  } else {
+    $('eea-panel').innerHTML='';
+  }
+
+  // Bit panel
+  const bits=cur.encBits||cur.decBits;
+  const bitStep=cur.encStep!==undefined?cur.encStep:cur.decStep;
+  if(bits&&bitStep!==undefined){
+    const isEnc=!!cur.encBits;
+    let html=`<div style="margin-top:8px"><label>${isEnc?'Encryption':'Decryption'} — exponent bits (MSB → LSB)</label><div class="bit-strip">`;
+    bits.forEach((b,i)=>{
+      const cls=i===bitStep?'active':i<bitStep?'done':'';
+      html+=`<div class="bit ${cls}"><span class="bi">b${i}</span>${b}</div>`;
+    });
+    html+='</div></div>';
+    $('bit-panel').innerHTML=html;
+  } else {
+    $('bit-panel').innerHTML='';
+  }
+
+  $('exp').innerHTML=cur.e;
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+let state={steps:[],i:0,status:'Idle',timer:null,speed:1,error:'',extra:{}};
+
+function syncBtns(){
+  const total=state.steps.length?state.steps.length-1:0;
+  const cur=state.steps[state.i];
+  $('btn-step').disabled=!cur||state.i>=total;
+  $('btn-play').disabled=!cur||state.i>=total;
+  $('btn-pause').disabled=state.status!=='Playing';
+  $('btn-reset').disabled=!cur;
+}
+function renderHistory(){
+  const s=Math.max(0,state.i-24);
+  $('history').innerHTML=state.steps.slice(s,state.i+1).map((x,j)=>{
+    const idx=s+j;
+    return`<tr data-i="${idx}" class="${idx===state.i?'cur':''}"><td>${idx}</td><td>${esc(x.h)}</td><td>${esc(short(x.v||''))}</td></tr>`;
+  }).join('');
+}
+function render(){
+  const cur=state.steps[state.i]||null;
+  const total=state.steps.length?state.steps.length-1:0;
+  const pct=total>0?Math.round(state.i*100/total):0;
+  $('counter').textContent=(cur?state.i:0)+' / '+total;
+  $('status').textContent=state.status;
+  $('prog').style.width=`${pct}%`;
+  if(cur){
+    $('state-note').innerHTML=esc(cur.h);
+    $('s-phase').textContent=cur.s.phase;
+    $('s-n').textContent=cur.s.n;
+    $('s-phi').textContent=cur.s.phi;
+    $('s-d').textContent=cur.s.d;
+  } else {
+    $('state-note').innerHTML=state.error?`<span style="color:var(--accent3)">${esc(state.error)}</span>`:'Click <b>Build Steps</b> to start.';
+    $('s-phase').textContent='—';$('s-n').textContent='—';$('s-phi').textContent='—';$('s-d').textContent='—';
+  }
+  const ls=cur?(Array.isArray(cur.l)?cur.l:[cur.l]):[];
+  document.querySelectorAll('.pline').forEach(el=>el.classList.toggle('active',ls.includes(+el.dataset.line)));
+  syncBtns();renderHistory();draw(cur,state.error);
+}
+
+// ─── KEY DISPLAY ──────────────────────────────────────────────────────────────
+function renderKeys(){
+  const ex=state.extra;
+  if(!ex.n){$('keys-body').innerHTML='<div class="note">Keys appear after clicking Build Steps.</div>';return}
+  $('keys-body').innerHTML=`
+<div class="key-row">
+  <div class="key-card pub"><div class="kl">Public Key</div><div class="kv">(${ex.n}, ${ex.e})</div></div>
+  <div class="key-card priv"><div class="kl">Private Key</div><div class="kv">d = ${ex.d}</div></div>
+</div>
+<div class="note" style="margin-top:6px">Encrypt: c = m<sup>${ex.e}</sup> mod ${ex.n}. Decrypt: m = c<sup>${ex.d}</sup> mod ${ex.n}.</div>`;
+}
+
+// ─── PLAYBACK ─────────────────────────────────────────────────────────────────
+function stopTimer(){if(state.timer){clearInterval(state.timer);state.timer=null}}
+function buildSteps(){
+  stopTimer();
+  try{
+    const out=makeSteps();
+    state.steps=out.steps;state.extra=out.extra;
+    state.i=0;state.status='Ready';state.error='';
+    renderKeys();
+  }catch(e){
+    state.steps=[];state.i=0;state.extra={};state.status='Idle';state.error=e.message;
+    $('keys-body').innerHTML=`<div class="note err">${esc(e.message)}</div>`;
+  }
+  render();
+}
+function stepFwd(){
+  if(!state.steps.length){buildSteps();return}
+  if(state.i<state.steps.length-1){state.i++;state.status=state.i===state.steps.length-1?'Done':'Paused'}
+  render();
+}
+function playAnim(){
+  if(!state.steps.length)buildSteps();
+  stopTimer();state.status='Playing';render();
+  state.timer=setInterval(()=>{
+    if(state.i<state.steps.length-1){state.i++;
+      if(state.i===state.steps.length-1){stopTimer();state.status='Done';render()}
+      else render();
+    }else{stopTimer();state.status='Done';render()}
+  },clamp(Math.round(1000/(state.speed||1)),180,2800));
+}
+
+$('btn-build').onclick=buildSteps;
+$('btn-step').onclick=stepFwd;
+$('btn-play').onclick=playAnim;
+$('btn-pause').onclick=()=>{stopTimer();state.status='Paused';render()};
+$('btn-reset').onclick=()=>{stopTimer();state.i=0;state.status=state.steps.length?'Ready':'Idle';render()};
+$('speed').oninput=()=>{state.speed=+$('speed').value;$('speed-val').textContent=state.speed.toFixed(2)+'×';if(state.status==='Playing')playAnim()};
+$('history').onclick=e=>{const tr=e.target.closest('tr[data-i]');if(!tr)return;
+  stopTimer();state.i=clamp(+tr.dataset.i,0,state.steps.length-1);
+  state.status=state.i===state.steps.length-1?'Done':'Paused';render()};
+document.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{
+  const p=PRESETS[b.dataset.sp];
+  $('in-p').value=p.p;$('in-q').value=p.q;$('in-e').value=p.e;$('in-m').value=p.m;buildSteps()});
+
+// keyboard shortcuts
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='TEXTAREA'||e.target.tagName==='INPUT')return;
+  if(e.key===' '){e.preventDefault();state.status==='Playing'?($('btn-pause').click()):($('btn-play').click())}
+  if(e.key==='ArrowRight'){e.preventDefault();stepFwd()}
+  if(e.key==='ArrowLeft'){e.preventDefault();if(state.i>0){stopTimer();state.i--;state.status='Paused';render()}}
+  if(e.key==='r'||e.key==='R'){$('btn-reset').click()}
+});
+
+// init
+$('pseudo').innerHTML=PSEUDO.map((x,i)=>`<div class="pline" data-line="${i+1}" title="${esc(x[1])}"><span class="ln">${i+1}</span><code>${esc(x[0])}</code></div>`).join('');
+buildSteps();
+</script>
+</body>
+</html>

@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2-Approximation Vertex Cover — BSD 404</title>
+<style>
+:root{
+  --bg:#0b1520;--surface:#112030;--surface2:#152840;
+  --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.13);
+  --text:#ddeeff;--muted:#6a9ab8;--faint:#3a6080;
+  --accent:#38d9c0;--accent2:#ffc94d;--accent3:#ff6b5b;--accent4:#7eb8ff;
+  --ok:#5de89a;--pink:#ff91b0;--purple:#b085f5;
+  --fs:13px;--fs-sm:12px;--fs-xs:11px;--fs-md:14px;
+  --fw:400;--fwb:700;--fwm:600;
+  --mono:'JetBrains Mono',Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --r:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);font-size:var(--fs);color:var(--text);
+  background:var(--bg);line-height:1.5;overflow-x:hidden}
+.page{display:grid;grid-template-rows:auto 1fr auto;min-height:100vh}
+.hdr{background:var(--surface);border-bottom:1px solid var(--border2);
+  padding:9px 18px;display:flex;align-items:center;justify-content:space-between;
+  gap:10px;flex-wrap:wrap}
+.hdr-title{font-size:14px;font-weight:var(--fwb);color:var(--text)}
+.hdr-title em{color:var(--accent);font-style:normal;margin-right:5px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:var(--fs-xs);padding:3px 8px;border-radius:999px;
+  background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted)}
+.chip.hi{background:rgba(56,217,192,.1);border-color:rgba(56,217,192,.25);color:var(--accent)}
+.main{display:grid;grid-template-columns:320px 1fr;min-height:0}
+.left{border-right:1px solid var(--border);display:grid;gap:0;align-content:start}
+.right{display:grid;gap:0;align-content:start}
+.panel{border-bottom:1px solid var(--border)}
+.ph{padding:7px 13px;background:var(--surface);display:flex;
+  align-items:center;justify-content:space-between;gap:8px;
+  font-size:var(--fs-sm);font-weight:var(--fwb);color:var(--text)}
+.ph .lbl{font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fw)}
+.pb{padding:11px 13px}
+label{font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fwb);
+  text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px}
+input[type=text]{width:100%;padding:6px 9px;border-radius:var(--r);
+  border:1px solid var(--border2);background:rgba(0,0,0,.3);color:var(--text);
+  font:var(--fs-sm)/1.5 var(--mono);outline:none;transition:border-color .15s}
+input[type=text]:focus{border-color:rgba(56,217,192,.4)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;
+  border-radius:999px;background:rgba(255,255,255,.1);outline:none;cursor:pointer;border:none;padding:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;
+  border-radius:50%;background:var(--accent);border:2px solid var(--bg);cursor:pointer}
+.btn-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+button{font:var(--fs-sm)/1 var(--sans);padding:5px 11px;border-radius:var(--r);
+  cursor:pointer;border:1px solid var(--border2);background:rgba(255,255,255,.05);
+  color:var(--text);transition:all .15s}
+button:hover{background:rgba(56,217,192,.12);border-color:rgba(56,217,192,.35);color:var(--accent)}
+button:disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
+button.primary{background:rgba(56,217,192,.15);border-color:rgba(56,217,192,.4);
+  color:var(--accent);font-weight:var(--fwb)}
+button.primary:hover{background:rgba(56,217,192,.25)}
+button.danger{background:rgba(255,107,91,.12);border-color:rgba(255,107,91,.35);color:var(--accent3)}
+button.danger:hover{background:rgba(255,107,91,.2)}
+.presets{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.presets button{font-size:var(--fs-xs);padding:4px 9px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.stat-box{padding:7px 9px;border-radius:var(--r);border:1px solid var(--border);background:rgba(0,0,0,.2)}
+.stat-box .k{font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fwb);
+  text-transform:uppercase;letter-spacing:.04em}
+.stat-box .v{font-size:var(--fs-md);font-weight:var(--fwb);font-family:var(--mono);
+  margin-top:2px;color:var(--text)}
+.progress{height:3px;background:rgba(255,255,255,.06);border-radius:999px;overflow:hidden;margin:7px 0 0}
+.progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent4));transition:width .2s}
+.note{font-size:var(--fs-sm);color:var(--muted);line-height:1.55;
+  padding:7px 9px;border-radius:var(--r);background:rgba(0,0,0,.15);
+  border:1px solid var(--border);margin-top:5px}
+.note.err{background:rgba(255,80,60,.07);border-color:rgba(255,80,60,.25);color:#ffc8c0}
+.note.ok{background:rgba(93,232,154,.07);border-color:rgba(93,232,154,.25);color:#b0f0cc}
+.hist-wrap{max-height:180px;overflow-y:auto;border-radius:var(--r);border:1px solid var(--border)}
+.hist-wrap::-webkit-scrollbar{width:3px}
+.hist-wrap::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+th{padding:5px 8px;background:var(--surface2);font-size:var(--fs-xs);font-weight:var(--fwb);
+  color:var(--muted);text-align:left;text-transform:uppercase;letter-spacing:.04em;
+  position:sticky;top:0;z-index:1}
+td{padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.04);
+  vertical-align:top;font-family:var(--mono);font-size:var(--fs-sm)}
+tbody tr{cursor:pointer}
+tbody tr:hover,tbody tr.cur{background:rgba(56,217,192,.07)}
+.pseudo{display:grid;gap:2px}
+.pline{display:grid;grid-template-columns:22px 1fr;gap:5px;
+  padding:4px 7px;border-radius:5px;border:1px solid transparent;
+  font-size:var(--fs-sm);color:var(--muted);cursor:help;transition:all .12s}
+.pline:hover{background:rgba(255,255,255,.03)}
+.pline.active{background:rgba(56,217,192,.09);border-color:rgba(56,217,192,.2);color:var(--text)}
+.pline .ln{color:var(--accent2);text-align:right;font-size:10px;margin-top:1px;font-family:var(--mono)}
+.pline code{font-family:var(--mono);font-size:var(--fs-sm)}
+.viz-hdr{padding:8px 15px;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.legend{display:flex;flex-wrap:wrap;gap:10px}
+.legend span{display:flex;align-items:center;gap:5px;font-size:var(--fs-xs);color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.vb{padding:14px 15px}
+.svg-box{border-radius:var(--r);border:1px solid var(--border);background:rgba(3,10,20,.8);
+  overflow:hidden;position:relative;cursor:crosshair}
+svg{display:block;width:100%;height:auto}
+.exp{margin-top:10px;padding:10px 12px;border-radius:var(--r);
+  background:rgba(0,0,0,.2);border:1px solid var(--border);
+  font-size:var(--fs-sm);line-height:1.65}
+.exp code{background:rgba(56,217,192,.08);border:1px solid rgba(56,217,192,.15);
+  padding:1px 4px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--accent)}
+.exp b{color:var(--accent2)}
+.edu-body{font-size:var(--fs-sm);line-height:1.6;color:var(--muted)}
+.edu-body b{color:var(--accent);font-weight:var(--fwm)}
+.speed-row{display:flex;align-items:center;gap:9px;margin-top:5px}
+.speed-row input{flex:1}
+.speed-row span{font-size:var(--fs-sm);font-family:var(--mono);color:var(--muted);min-width:36px}
+.phase-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:10px}
+.phase-card{padding:6px 7px;border-radius:var(--r);border:1px solid var(--border);
+  background:rgba(0,0,0,.2);border-top:2px solid transparent;transition:all .2s;text-align:center}
+.phase-card.active{background:rgba(255,201,77,.07);border-color:rgba(255,201,77,.3)}
+.phase-card.done{background:rgba(93,232,154,.05);border-color:rgba(93,232,154,.2)}
+.phase-card .pn{font-size:var(--fs-sm);font-weight:var(--fwb);font-family:var(--mono)}
+.phase-card .pl{font-size:9px;color:var(--muted);margin-top:2px;line-height:1.3}
+.cover-display{margin-top:8px;padding:8px 10px;border-radius:var(--r);
+  border:1px solid rgba(56,217,192,.2);background:rgba(56,217,192,.04)}
+.cover-display .cl{font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fwb);
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.cover-display .cv{font-family:var(--mono);font-size:var(--fs-sm);color:var(--accent)}
+.approx-bar{margin-top:8px}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.bar-label{font-size:var(--fs-xs);color:var(--muted);width:55px;flex-shrink:0}
+.bar-track{flex:1;height:12px;background:rgba(255,255,255,.06);border-radius:6px;overflow:hidden}
+.bar-fill{height:100%;border-radius:6px;transition:width .3s}
+.bar-fill.opt{background:var(--ok)}
+.bar-fill.approx{background:var(--accent2)}
+.bar-val{font-size:var(--fs-xs);font-family:var(--mono);color:var(--muted);width:28px;text-align:right}
+.draw-mode-hint{font-size:var(--fs-xs);color:var(--muted);margin-top:5px;padding:5px 7px;
+  border-radius:5px;border:1px solid var(--border);background:rgba(255,255,255,.02)}
+footer{text-align:center;font-size:var(--fs-xs);color:var(--faint);
+  padding:8px;border-top:1px solid var(--border)}
+.opt-table{width:100%;border-collapse:collapse;margin-top:8px;font-size:var(--fs-sm)}
+.opt-table th{padding:5px 8px;background:var(--surface2);font-size:var(--fs-xs);font-weight:var(--fwb);
+  color:var(--muted);text-align:center;text-transform:uppercase;letter-spacing:.04em}
+.opt-table td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.04);
+  text-align:center;font-family:var(--mono)}
+.opt-table tr.row-approx td{color:var(--accent2)}
+.opt-table tr.row-opt td{color:var(--ok)}
+.opt-table tr.row-ratio td{color:var(--text);font-weight:var(--fwb)}
+.opt-verdict{margin-top:8px;padding:8px 10px;border-radius:var(--r);font-size:var(--fs-sm);line-height:1.6}
+.opt-verdict.tight{background:rgba(255,107,91,.07);border:1px solid rgba(255,107,91,.25);color:#ffc8c0}
+.opt-verdict.good{background:rgba(93,232,154,.07);border:1px solid rgba(93,232,154,.25);color:#b0f0cc}
+.opt-verdict.exact{background:rgba(56,217,192,.07);border:1px solid rgba(56,217,192,.25);color:var(--accent)}
+.opt-sets{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.opt-set-box{padding:7px 9px;border-radius:var(--r);border:1px solid var(--border);background:rgba(0,0,0,.2)}
+.opt-set-box .osl{font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fwb);
+  text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.opt-set-box .osv{font-family:var(--mono);font-size:var(--fs-sm)}
+@media(max-width:820px){
+  .main{grid-template-columns:1fr}
+  .phase-strip{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:480px){.phase-strip{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hdr">
+  <div class="hdr-title"><em>VC</em>2-Approximation for Vertex Cover</div>
+  <div class="chips">
+    <span class="chip hi">CLO-5</span>
+    <span class="chip">BSD 404 · Algorithms II</span>
+    <span class="chip">CLRS Ch. 35.1</span>
+    <span class="chip">Houssein Ahmed</span>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- LEFT -->
+  <aside class="left">
+
+    <div class="panel">
+      <div class="ph">Controls <span class="lbl">Space=play/pause · →=step · R=reset</span></div>
+      <div class="pb">
+        <div style="margin-bottom:8px">
+          <label>Graph Edges (e.g. 1-2,2-3,3-4)</label>
+          <input id="in-edges" type="text" value="1-2,1-3,2-4,3-4,4-5,3-5">
+        </div>
+        <div class="presets">
+          <button data-sp="triangle">Triangle</button>
+          <button data-sp="path">Path</button>
+          <button data-sp="bipartite">Bipartite</button>
+          <button data-sp="star">Star</button>
+          <button data-sp="cycle">Cycle-6</button>
+        </div>
+        <div style="margin-top:9px"><label>Speed</label>
+          <div class="speed-row">
+            <input id="speed" type="range" min="0.25" max="4" step="0.25" value="1">
+            <span id="speed-val">1.00×</span>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button id="btn-build" class="primary">Build Steps</button>
+          <button id="btn-step">Step</button>
+          <button id="btn-play">Play</button>
+          <button id="btn-pause">Pause</button>
+          <button id="btn-reset">Reset</button>
+        </div>
+        <div class="draw-mode-hint" id="draw-hint">
+          💡 <b>Draw mode:</b> After running, <b>click canvas</b> to add nodes, then type edges above and rebuild.
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">State <span class="lbl">Live counters</span></div>
+      <div class="pb">
+        <div class="stat-grid">
+          <div class="stat-box"><div class="k">Step</div><div class="v" id="counter">0 / 0</div></div>
+          <div class="stat-box"><div class="k">Status</div><div class="v" id="status">Idle</div></div>
+          <div class="stat-box"><div class="k">Edges left</div><div class="v" id="s-edges">—</div></div>
+          <div class="stat-box"><div class="k">Cover size</div><div class="v" id="s-cover">—</div></div>
+          <div class="stat-box"><div class="k">Matching |M|</div><div class="v" id="s-matching">—</div></div>
+          <div class="stat-box"><div class="k">OPT ≥</div><div class="v" id="s-opt">—</div></div>
+        </div>
+        <div class="progress"><div id="prog" class="progress-fill"></div></div>
+        <div class="note" id="state-note">Click <b>Build Steps</b> to start.</div>
+        <div class="phase-strip" id="phase-strip"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Cover vs OPT <span class="lbl">2-approximation bound</span></div>
+      <div class="pb">
+        <div class="approx-bar">
+          <div class="bar-row">
+            <div class="bar-label">OPT ≥</div>
+            <div class="bar-track"><div id="bar-opt" class="bar-fill opt" style="width:0%"></div></div>
+            <div class="bar-val" id="bv-opt">—</div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">Cover</div>
+            <div class="bar-track"><div id="bar-cover" class="bar-fill approx" style="width:0%"></div></div>
+            <div class="bar-val" id="bv-cover">—</div>
+          </div>
+        </div>
+        <div class="cover-display">
+          <div class="cl">Current Cover C</div>
+          <div class="cv" id="cover-set">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Step History <span class="lbl">Click row to jump</span></div>
+      <div class="pb">
+        <div class="hist-wrap"><table>
+          <thead><tr><th>#</th><th>Step</th><th>Value</th></tr></thead>
+          <tbody id="history"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- Overview (compact) -->
+    <div class="panel">
+      <div class="ph" style="background:rgba(56,217,192,.06)">Overview <span class="lbl">Quick reference</span></div>
+      <div class="pb">
+        <div class="edu-body">
+          <b style="color:var(--accent4)">Goal:</b> Find a set C of vertices that covers every edge — every edge must have at least one endpoint in C.<br><br>
+          <b style="color:var(--accent2)">Algorithm:</b> Repeatedly pick any edge, add <em>both</em> endpoints to C, remove all incident edges. Repeat until no edges remain.<br><br>
+          <b style="color:var(--ok)">Guarantee:</b> |C| ≤ 2 · OPT. Finding the exact minimum is NP-hard; this gives a provably near-optimal answer in polynomial time.
+        </div>
+      </div>
+    </div>
+
+    <!-- Educational: Worked Example -->
+    <div class="panel">
+      <div class="ph" style="background:rgba(255,201,77,.06)">Worked Example <span class="lbl">Trace it by hand</span></div>
+      <div class="pb">
+        <div class="edu-body">
+          <b>Graph:</b> edges {1-2, 1-3, 2-4, 3-4, 4-5, 3-5}<br><br>
+          <b style="color:var(--accent2)">Step 1:</b> Pick edge (1,2). Add vertices {1, 2} to cover. Remove all edges touching 1 or 2: removes (1-2), (1-3), (2-4). Remaining: {3-4, 4-5, 3-5}.<br><br>
+          <b style="color:var(--accent2)">Step 2:</b> Pick edge (3,4). Add vertices {3, 4} to cover. Remove all edges touching 3 or 4: removes (3-4), (4-5), (3-5). Remaining: {}.<br><br>
+          <b>Result:</b> Cover = {1, 2, 3, 4}. Matching M = {(1,2),(3,4)}, so |M| = 2.<br>
+          OPT ≥ |M| = 2. Cover = 4 = 2×2. <b style="color:var(--ok)">Ratio = 2.</b><br><br>
+          <b>Note:</b> The optimal cover here is {2, 3, 4} of size 3. Our algorithm gives 4 — still within the 2× bound (4 ≤ 2×3 = 6). ✓
+        </div>
+      </div>
+    </div>
+
+    <!-- Educational: Key Concepts -->
+    <div class="panel">
+      <div class="ph" style="background:rgba(126,184,255,.06)">Key Concepts <span class="lbl">Important ideas</span></div>
+      <div class="pb">
+        <div class="edu-body">
+          <b style="color:var(--accent4)">Vertex Cover.</b> A set C ⊆ V such that for every edge (u,v) ∈ E, u ∈ C or v ∈ C (or both). Every edge must be "covered."<br><br>
+          <b style="color:var(--pink)">Maximal Matching.</b> A set M of edges with no two sharing an endpoint, and no edge can be added. Our algorithm implicitly builds such a matching by always picking one arbitrary uncovered edge.<br><br>
+          <b style="color:var(--accent2)">Approximation Ratio.</b> The ratio of algorithm output to optimal. APPROX-VERTEX-COVER always gives ratio ≤ 2. This is proven optimal — no polynomial algorithm with ratio &lt; 2 is known under standard assumptions.<br><br>
+          <b style="color:var(--ok)">Why NP-hard?</b> Minimum Vertex Cover is equivalent to Maximum Independent Set (complement): if C is a min cover, V∖C is a max independent set. Both are NP-hard to solve exactly for general graphs.
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- RIGHT -->
+  <div class="right">
+
+    <div class="panel viz-hdr">
+      <span style="font-size:var(--fs-sm);font-weight:var(--fwb)">Graph Visualization</span>
+      <div class="legend">
+        <span><span class="dot" style="background:#6a9ab8"></span>Uncovered vertex</span>
+        <span><span class="dot" style="background:#ffc94d"></span>Selected edge</span>
+        <span><span class="dot" style="background:#38d9c0"></span>In cover</span>
+        <span><span class="dot" style="background:#5de89a"></span>Matched edge</span>
+        <span><span class="dot" style="background:#3a6080;border:1px solid #6a9ab8"></span>Removed edge</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="vb">
+        <div class="svg-box" id="svg-box">
+          <svg id="main-svg" viewBox="0 0 620 360" xmlns="http://www.w3.org/2000/svg">
+            <text x="310" y="190" text-anchor="middle" fill="#3a6080" font-size="14" font-family="sans-serif">Click Build Steps to draw the graph.</text>
+          </svg>
+        </div>
+        <div class="exp" id="exp">Step explanation appears here.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Pseudocode <span class="lbl">Hover line for tooltip · Active line highlighted</span></div>
+      <div class="pb"><div id="pseudo" class="pseudo"></div></div>
+    </div>
+
+    <!-- The Main Idea (moved here from left) -->
+    <div class="panel">
+      <div class="ph" style="background:rgba(56,217,192,.06)">The Main Idea <span class="lbl">Algorithm overview</span></div>
+      <div class="pb">
+        <div class="edu-body" style="font-size:var(--fs)">
+          <b>The problem.</b> A <b style="color:var(--accent4)">vertex cover</b> is a set of vertices such that every edge in the graph has at least one endpoint in the set. Finding the minimum vertex cover is NP-hard — no known polynomial algorithm can always find the exact optimum.<br><br>
+          <b>The trick.</b> Instead of finding the exact answer, we use a <b style="color:var(--accent2)">greedy matching strategy</b> that is guaranteed to be at most <b style="color:var(--accent3)">twice</b> the optimal. This is the 2-approximation guarantee.<br><br>
+          <b>How it works.</b> Pick any uncovered edge (u,v). Add <em>both</em> u and v to the cover. Remove all edges incident to u or v. Repeat until no edges remain.<br><br>
+          <b>Why it's a 2-approximation.</b> Every edge we pick forms part of a matching M. No two edges in M share an endpoint, so OPT must include at least one vertex from each matched edge. That gives OPT ≥ |M|. Our cover has exactly 2|M| vertices (both endpoints of each matched edge). Therefore: <b style="color:var(--ok)">|Cover| = 2|M| ≤ 2·OPT</b>.
+        </div>
+      </div>
+    </div>
+
+    <!-- 2-Approximation Proof -->
+    <div class="panel">
+      <div class="ph" style="background:rgba(93,232,154,.05)">2-Approximation Proof <span class="lbl">Why it works</span></div>
+      <div class="pb">
+        <div class="edu-body" style="font-size:var(--fs)">
+          <b>Theorem:</b> APPROX-VERTEX-COVER returns a vertex cover of size at most 2·OPT.<br><br>
+          <b style="color:var(--ok)">Proof sketch (CLRS 35.1):</b><br><br>
+          Let M be the set of edges selected by the algorithm (one per iteration). M is a matching — no two edges share a vertex, because we remove all edges incident to picked vertices immediately after picking them.<br><br>
+          <b style="color:var(--accent4)">Lower bound on OPT:</b> Any vertex cover C* must cover every edge in M. Since no two edges in M share a vertex, covering each of them requires at least one distinct vertex per edge. Therefore |C*| ≥ |M|, i.e., <b>OPT ≥ |M|</b>.<br><br>
+          <b style="color:var(--accent2)">Upper bound on our Cover:</b> We add exactly 2 vertices per edge in M (both endpoints). So |Cover| = 2|M|.<br><br>
+          <b style="color:var(--accent3)">Combining:</b> |Cover| = 2|M| ≤ 2·OPT. □<br><br>
+          <b>Also correct:</b> The output is a valid cover because when the loop ends, every edge has been removed — meaning every edge had at least one endpoint added to C. ✓
+        </div>
+      </div>
+    </div>
+
+    <!-- OPT Comparison Panel -->
+    <div class="panel">
+      <div class="ph" style="background:rgba(255,145,176,.05)">Approx vs Optimal <span class="lbl">Brute-force exact OPT (graphs ≤ 20 vertices)</span></div>
+      <div class="pb" id="opt-panel">
+        <div class="note">Run the algorithm to see the exact OPT comparison.</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<footer>BSD 404 · Algorithms II · 2-Approximation for Vertex Cover · HTML5 · CSS3 · Vanilla JS · SVG — no external libraries</footer>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const short=(s,mx=60)=>{const t=String(s).replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();return t.length>mx?t.slice(0,mx-1)+'…':t};
+
+// ─── PRESETS ──────────────────────────────────────────────────────────────────
+const PRESETS={
+  triangle:{edges:'1-2,2-3,1-3'},
+  path:{edges:'1-2,2-3,3-4,4-5'},
+  bipartite:{edges:'1-4,1-5,2-4,2-6,3-5,3-6'},
+  star:{edges:'1-2,1-3,1-4,1-5,1-6'},
+  cycle:{edges:'1-2,2-3,3-4,4-5,5-6,6-1'}
+};
+
+// ─── PSEUDOCODE ───────────────────────────────────────────────────────────────
+const PSEUDO=[
+  ['APPROX-VERTEX-COVER(G):','Entry point. G has vertex set V and edge set E.'],
+  ['  C = ∅','Initialize the cover as empty.'],
+  ['  E\' = E','Work on a copy of edges so we can remove edges without changing G.'],
+  ['  while E\' ≠ ∅:','Keep going until all edges are covered.'],
+  ['    pick any edge (u, v) ∈ E\'','Arbitrarily select an uncovered edge.'],
+  ['    C = C ∪ {u, v}','Add both endpoints to the cover.'],
+  ['    remove from E\' all edges incident to u or v','Remove edges now covered by u and v.'],
+  ['  return C','Return the approximate vertex cover.']
+];
+
+// ─── GRAPH LAYOUT ─────────────────────────────────────────────────────────────
+function layoutNodes(nodeSet){
+  const nodes=[...nodeSet];
+  const n=nodes.length;
+  const W=620,H=360,cx=W/2,cy=H/2;
+  const r=Math.min(cx,cy)*0.72;
+  const pos={};
+  nodes.forEach((nd,i)=>{
+    const angle=-Math.PI/2+(2*Math.PI*i/n);
+    pos[nd]={x:cx+r*Math.cos(angle),y:cy+r*Math.sin(angle)};
+  });
+  // if 1 node
+  if(n===1)pos[nodes[0]]={x:cx,y:cy};
+  return pos;
+}
+
+// ─── STEP BUILDER ─────────────────────────────────────────────────────────────
+function parseEdges(str){
+  const pairs=[];
+  const seen=new Set();
+  const segs=str.split(',');
+  for(const seg of segs){
+    const m=seg.trim().match(/^(\w+)[-–](\w+)$/);
+    if(!m)continue;
+    const u=m[1],v=m[2];
+    if(u===v)continue; // reject self-loops
+    // canonical key: sort so "1-2" and "2-1" are the same edge
+    const key=[u,v].sort().join('-');
+    if(seen.has(key))continue;
+    seen.add(key);
+    pairs.push([u,v]);
+  }
+  return pairs;
+}
+
+function computeOptLB(matchingEdges){return matchingEdges.length}
+
+function makeSteps(){
+  const rawEdges=parseEdges($('in-edges').value);
+  if(!rawEdges.length)throw new Error('No valid edges found. Use format: 1-2,2-3');
+  const nodeSet=new Set();
+  rawEdges.forEach(([u,v])=>{nodeSet.add(u);nodeSet.add(v)});
+  const pos=layoutNodes(nodeSet);
+  const steps=[];
+  const S=(h,v,state,l,e)=>({h,v:v||'',s:{...state},l:Array.isArray(l)?l:[l],e});
+
+  // initial state
+  let edgesLeft=rawEdges.map(([u,v])=>({u,v,state:'active'}));
+  // cover array removed — coverSet is the single source of truth (deduplicates vertices correctly)
+  const matching=[];
+  const removed=[];
+  const coverSet=new Set();
+
+  const snap=(phase,h,v,l,exp)=>{
+    steps.push({
+      h,v:v||'',
+      s:{phase,edgesLeft:edgesLeft.length,cover:coverSet.size,matching:matching.length},
+      l:Array.isArray(l)?l:[l],
+      e:exp,
+      pos,
+      allEdges:rawEdges.map(([eu,ev])=>({u:eu,v:ev})),
+      coverSnapshot:[...coverSet],
+      edgeStates:edgesLeft.map(e=>({...e})),
+      removedSnapshot:[...removed],
+      matchingSnapshot:[...matching],
+      selectedEdge:null
+    });
+  };
+
+  // Step 0 — Init
+  snap('Init','Initialize C = ∅, E\' = copy of E','',
+    [1,2,3],'<b>Starting APPROX-VERTEX-COVER.</b> Initialize cover C = ∅. Copy edge set E\' = E with '+rawEdges.length+' edges. The algorithm will greedily pick edges until all are covered.');
+
+  let iteration=0;
+  const maxIter=rawEdges.length+5;
+
+  while(edgesLeft.length>0 && iteration<maxIter){
+    iteration++;
+    // pick first remaining edge
+    const picked=edgesLeft[0];
+    const {u,v}=picked;
+
+    // highlight selected edge — note matching.push happens after this snapshot,
+    // so we record matching.length+1 to reflect the edge being picked right now
+    steps.push({
+      h:`Iteration ${iteration}: pick edge (${u}, ${v})`,v:`(${u},${v})`,
+      s:{phase:'Pick',edgesLeft:edgesLeft.length,cover:coverSet.size,matching:matching.length+1},
+      l:[4,5],
+      e:`<b>Pick edge (${u}, ${v})</b> from remaining E'. This edge is not yet covered. We will add both endpoints to the cover set C. The edge (${u},${v}) now joins the matching M.`,
+      pos,allEdges:rawEdges.map(([eu,ev])=>({u:eu,v:ev})),
+      coverSnapshot:[...coverSet],
+      edgeStates:edgesLeft.map(e=>({...e})),
+      removedSnapshot:[...removed],
+      matchingSnapshot:[...matching],
+      selectedEdge:{u,v}
+    });
+
+    // add u and v to cover (coverSet deduplicates automatically)
+    matching.push({u,v});
+    coverSet.add(u);coverSet.add(v);
+
+    steps.push({
+      h:`Add {${u}, ${v}} to cover C`,v:`C={${[...coverSet].join(',')}}`,
+      s:{phase:'Cover',edgesLeft:edgesLeft.length,cover:coverSet.size,matching:matching.length},
+      l:[6],
+      e:`<b>Add both endpoints to cover:</b> C = C ∪ {${u}, ${v}}. Cover is now C = {${[...coverSet].join(', ')}}. Matching M has ${matching.length} edge(s). Every vertex in the matching must appear in any valid vertex cover, so OPT ≥ |M| = ${matching.length}.`,
+      pos,allEdges:rawEdges.map(([eu,ev])=>({u:eu,v:ev})),
+      coverSnapshot:[...coverSet],
+      edgeStates:edgesLeft.map(e=>({...e})),
+      removedSnapshot:[...removed],
+      matchingSnapshot:[...matching],
+      selectedEdge:{u,v}
+    });
+
+    // remove all edges incident to u or v
+    const before=edgesLeft.length;
+    const toRemove=edgesLeft.filter(e=>e.u===u||e.v===u||e.u===v||e.v===v);
+    toRemove.forEach(e=>removed.push({u:e.u,v:e.v}));
+    edgesLeft=edgesLeft.filter(e=>!(e.u===u||e.v===u||e.u===v||e.v===v));
+    const rCount=before-edgesLeft.length;
+
+    steps.push({
+      h:`Remove ${rCount} edge(s) incident to {${u}, ${v}}`,v:`${edgesLeft.length} edges left`,
+      s:{phase:'Remove',edgesLeft:edgesLeft.length,cover:coverSet.size,matching:matching.length},
+      l:[7],
+      e:`<b>Remove all edges incident to ${u} or ${v}.</b> Removed ${rCount} edge(s). ${edgesLeft.length} edge(s) remain in E'. All of these removed edges are now covered by the cover set C.`,
+      pos,allEdges:rawEdges.map(([eu,ev])=>({u:eu,v:ev})),
+      coverSnapshot:[...coverSet],
+      edgeStates:edgesLeft.map(e=>({...e})),
+      removedSnapshot:[...removed],
+      matchingSnapshot:[...matching],
+      selectedEdge:null
+    });
+  }
+
+  // Final step
+  const optLB=computeOptLB(matching);
+  const coverSz=coverSet.size;
+  steps.push({
+    h:`Done! Cover = {${[...coverSet].join(',')}}`,v:`|C|=${coverSz}, OPT≥${optLB}`,
+    s:{phase:'Done',edgesLeft:0,cover:coverSz,matching:matching.length},
+    l:[8],
+    e:`<b>All edges are covered. Algorithm complete.</b><br>Cover C = {${[...coverSet].join(', ')}}, |C| = ${coverSz}.<br>Matching |M| = ${optLB}, so OPT ≥ ${optLB}.<br><b style="color:var(--ok)">Ratio: ${coverSz} / OPT ≤ ${coverSz} / ${optLB} = ${optLB>0?(coverSz/optLB).toFixed(2):'1.00'} ≤ 2.0 ✓</b>`,
+    pos,allEdges:rawEdges.map(([eu,ev])=>({u:eu,v:ev})),
+    coverSnapshot:[...coverSet],
+    edgeStates:[],
+    removedSnapshot:[...removed],
+    matchingSnapshot:[...matching],
+    selectedEdge:null,
+    final:true,
+    optLB,coverSz
+  });
+
+  return{steps,extra:{optLB,coverSz,totalEdges:rawEdges.length,nodes:[...nodeSet],edges:rawEdges,approxCover:[...coverSet]}};
+}
+
+// ─── DRAW ──────────────────────────────────────────────────────────────────────
+function draw(cur,err){
+  const svg=$('main-svg');
+  if(!cur||!cur.pos){
+    svg.innerHTML='<text x="310" y="190" text-anchor="middle" fill="#3a6080" font-size="14" font-family="sans-serif">'+(err?esc(err):'Click Build Steps to draw the graph.')+'</text>';
+    return;
+  }
+  const pos=cur.pos;
+  const allEdges=cur.allEdges||[];
+  const coverSnap=new Set(cur.coverSnapshot||[]);
+  const removedSet=new Set((cur.removedSnapshot||[]).map(e=>`${e.u}-${e.v}`));
+  const matchingSet=new Set((cur.matchingSnapshot||[]).map(e=>`${e.u}-${e.v}`));
+  const remaining=new Set((cur.edgeStates||[]).map(e=>`${e.u}-${e.v}`));
+  const sel=cur.selectedEdge;
+
+  let html='<defs><marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><polygon points="0 0, 6 3, 0 6" fill="rgba(255,255,255,.15)"/></marker></defs>';
+
+  // Draw edges
+  for(const e of allEdges){
+    const p1=pos[e.u],p2=pos[e.v];
+    if(!p1||!p2)continue;
+    const key=`${e.u}-${e.v}`;
+    const isSelected=sel&&((sel.u===e.u&&sel.v===e.v)||(sel.u===e.v&&sel.v===e.u));
+    const isMatched=matchingSet.has(key)||matchingSet.has(`${e.v}-${e.u}`);
+    const isRemoved=removedSet.has(key)||removedSet.has(`${e.v}-${e.u}`);
+    const isRemaining=remaining.has(key)||remaining.has(`${e.v}-${e.u}`);
+
+    let color,sw,opacity,dash='';
+    if(isSelected){color='#ffc94d';sw=3;opacity=1;}
+    else if(isRemoved&&isMatched){color='#3a7a5a';sw=2;opacity=0.55;dash='5 3';}// matched+removed: tinted green but faded
+    else if(isRemoved){color='#2a4060';sw=1;opacity=0.35;dash='4 4';}
+    else if(isMatched){color='#5de89a';sw=2.5;opacity=1;}
+    else if(isRemaining){color='#7eb8ff';sw=1.8;opacity=0.8;}
+    else{color='#2a4060';sw=1;opacity=0.3;}
+
+    html+=`<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${color}" stroke-width="${sw}" stroke-opacity="${opacity}" stroke-dasharray="${dash}" stroke-linecap="round"/>`;
+
+    // Edge label for selected
+    if(isSelected){
+      const mx=((p1.x+p2.x)/2).toFixed(1),my=((p1.y+p2.y)/2-8).toFixed(1);
+      html+=`<text x="${mx}" y="${my}" text-anchor="middle" fill="#ffc94d" font-size="11" font-family="JetBrains Mono,monospace" font-weight="bold">(${e.u},${e.v})</text>`;
+    }
+  }
+
+  // Draw nodes
+  for(const [nd,p] of Object.entries(pos)){
+    const inCover=coverSnap.has(nd);
+    const isSelVertex=sel&&(sel.u===nd||sel.v===nd);
+    let fill,stroke,r=18;
+    if(isSelVertex){fill='rgba(255,201,77,.25)';stroke='#ffc94d';}
+    else if(inCover){fill='rgba(56,217,192,.2)';stroke='#38d9c0';}
+    else{fill='rgba(20,50,80,.8)';stroke='#4a7a9a';}
+
+    html+=`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${inCover||isSelVertex?2.5:1.5}"/>`;
+    html+=`<text x="${p.x.toFixed(1)}" y="${(p.y+5).toFixed(1)}" text-anchor="middle" fill="${inCover?'#38d9c0':isSelVertex?'#ffc94d':'#9ac8e0'}" font-size="13" font-family="JetBrains Mono,monospace" font-weight="bold">${esc(nd)}</text>`;
+  }
+
+  svg.innerHTML=html;
+
+  // Update approx bars
+  const coverSz=cur.s.cover||0;
+  const optLB=cur.s.matching||0;
+  const maxBar=Math.max(coverSz,optLB,1);
+  $('bar-opt').style.width=`${(optLB/maxBar*100).toFixed(0)}%`;
+  $('bar-cover').style.width=`${(coverSz/maxBar*100).toFixed(0)}%`;
+  $('bv-opt').textContent=optLB||'0';
+  $('bv-cover').textContent=coverSz||'0';
+  $('cover-set').textContent=coverSz?'{'+[...coverSnap].join(', ')+'}':'∅';
+
+  // Phase strip
+  const phases=[
+    {label:'Init',color:'#7eb8ff',phase:'Init'},
+    {label:'Pick/Cover',color:'#ffc94d',phase:'Cover'},
+    {label:'Done',color:'#5de89a',phase:'Done'}
+  ];
+  const curPhase=cur.s.phase;
+  $('phase-strip').innerHTML=phases.map(ph=>{
+    const isActive=curPhase===ph.phase||(ph.phase==='Cover'&&(curPhase==='Pick'||curPhase==='Remove'));
+    const isDone=ph.phase==='Done'&&curPhase==='Done';
+    return`<div class="phase-card ${isActive?'active':''} ${isDone?'done':''}" style="border-top-color:${ph.color}">
+<div class="pn" style="color:${isActive?'#ffc94d':isDone?'var(--ok)':'var(--text)'}">${ph.label}</div>
+<div class="pl">${isDone?'Complete':isActive?'Active':'Pending'}</div>
+</div>`;}).join('');
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+let state={steps:[],i:0,status:'Idle',timer:null,speed:1,error:'',extra:{}};
+
+function syncBtns(){
+  const total=state.steps.length?state.steps.length-1:0;
+  const cur=state.steps[state.i];
+  $('btn-step').disabled=!cur||state.i>=total;
+  $('btn-play').disabled=!cur||state.i>=total;
+  $('btn-pause').disabled=state.status!=='Playing';
+  $('btn-reset').disabled=!cur;
+}
+
+function renderHistory(){
+  const s=Math.max(0,state.i-24);
+  $('history').innerHTML=state.steps.slice(s,state.i+1).map((x,j)=>{
+    const idx=s+j;
+    return`<tr data-i="${idx}" class="${idx===state.i?'cur':''}"><td>${idx}</td><td>${esc(x.h)}</td><td>${esc(short(x.v||''))}</td></tr>`;
+  }).join('');
+  // auto-scroll so the current row is always visible
+  const wrap=$('history').closest('.hist-wrap');
+  const curRow=$('history').querySelector('tr.cur');
+  if(wrap&&curRow){
+    const wTop=wrap.scrollTop,wBot=wTop+wrap.clientHeight;
+    const rTop=curRow.offsetTop,rBot=rTop+curRow.offsetHeight;
+    if(rBot>wBot)wrap.scrollTop=rBot-wrap.clientHeight;
+    else if(rTop<wTop)wrap.scrollTop=rTop;
+  }
+}
+
+function render(){
+  const cur=state.steps[state.i]||null;
+  const total=state.steps.length?state.steps.length-1:0;
+  const pct=total>0?Math.round(state.i*100/total):0;
+  $('counter').textContent=(cur?state.i:0)+' / '+total;
+  $('status').textContent=state.status;
+  $('prog').style.width=`${pct}%`;
+  if(cur){
+    $('state-note').innerHTML=esc(cur.h);
+    $('s-edges').textContent=cur.s.edgesLeft!==undefined?cur.s.edgesLeft:'—';
+    $('s-cover').textContent=cur.s.cover!==undefined?cur.s.cover:'—';
+    $('s-matching').textContent=cur.s.matching!==undefined?cur.s.matching:'—';
+    $('s-opt').textContent=cur.s.matching!==undefined?('≥'+cur.s.matching):'—';
+  } else {
+    $('state-note').innerHTML=state.error?`<span style="color:var(--accent3)">${esc(state.error)}</span>`:'Click <b>Build Steps</b> to start.';
+    $('s-edges').textContent='—';$('s-cover').textContent='—';$('s-matching').textContent='—';$('s-opt').textContent='—';
+  }
+  const ls=cur?(Array.isArray(cur.l)?cur.l:[cur.l]):[];
+  document.querySelectorAll('.pline').forEach(el=>el.classList.toggle('active',ls.includes(+el.dataset.line)));
+  if(cur)$('exp').innerHTML=cur.e||'';
+  syncBtns();renderHistory();draw(cur,state.error);
+}
+
+// ─── PLAYBACK ─────────────────────────────────────────────────────────────────
+function stopTimer(){if(state.timer){clearInterval(state.timer);state.timer=null}}
+function buildSteps(){
+  stopTimer();
+  try{
+    const out=makeSteps();
+    state.steps=out.steps;state.extra=out.extra;
+    state.i=0;state.status='Ready';state.error='';
+  }catch(e){
+    state.steps=[];state.i=0;state.extra={};state.status='Idle';state.error=e.message;
+  }
+  render();
+  renderOptPanel();
+}
+function stepFwd(){
+  if(!state.steps.length){buildSteps();return}
+  if(state.i<state.steps.length-1){state.i++;state.status=state.i===state.steps.length-1?'Done':'Paused'}
+  render();
+}
+function playAnim(){
+  if(!state.steps.length)buildSteps();
+  stopTimer();state.status='Playing';render();
+  state.timer=setInterval(()=>{
+    if(state.i<state.steps.length-1){state.i++;
+      if(state.i===state.steps.length-1){stopTimer();state.status='Done';render()}
+      else render();
+    }else{stopTimer();state.status='Done';render()}
+  },clamp(Math.round(1000/(state.speed||1)),180,2800));
+}
+
+$('btn-build').onclick=buildSteps;
+$('btn-step').onclick=stepFwd;
+$('btn-play').onclick=playAnim;
+$('btn-pause').onclick=()=>{stopTimer();state.status='Paused';render()};
+$('btn-reset').onclick=()=>{stopTimer();state.i=0;state.status=state.steps.length?'Ready':'Idle';render()};
+$('speed').oninput=()=>{state.speed=+$('speed').value;$('speed-val').textContent=state.speed.toFixed(2)+'×';if(state.status==='Playing')playAnim()};
+$('history').onclick=e=>{const tr=e.target.closest('tr[data-i]');if(!tr)return;
+  stopTimer();state.i=clamp(+tr.dataset.i,0,state.steps.length-1);
+  state.status=state.i===state.steps.length-1?'Done':'Paused';render()};
+document.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{
+  const p=PRESETS[b.dataset.sp];
+  $('in-edges').value=p.edges;buildSteps()});
+
+// keyboard shortcuts
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='TEXTAREA'||e.target.tagName==='INPUT')return;
+  if(e.key===' '){e.preventDefault();state.status==='Playing'?($('btn-pause').click()):($('btn-play').click())}
+  if(e.key==='ArrowRight'){e.preventDefault();stepFwd()}
+  if(e.key==='ArrowLeft'){e.preventDefault();if(state.i>0){stopTimer();state.i--;state.status='Paused';render()}}
+  if(e.key==='r'||e.key==='R'){$('btn-reset').click()}
+});
+
+// ─── BRUTE-FORCE OPT SOLVER ──────────────────────────────────────────────────
+// Works for graphs up to 20 vertices via bitmask enumeration.
+// For each subset size k=0,1,2,...,n: check all C(n,k) subsets until one covers all edges.
+function computeExactOPT(nodes,edges){
+  const n=nodes.length;
+  if(n>20)return null; // too large for brute force
+  const nodeIdx={};
+  nodes.forEach((nd,i)=>nodeIdx[nd]=i);
+  // represent each edge as a pair of bit indices
+  const edgeBits=edges.map(([u,v])=>[nodeIdx[u],nodeIdx[v]]);
+  // try subsets in increasing size order
+  for(let size=0;size<=n;size++){
+    const result=findCoverOfSize(n,size,edgeBits,nodes);
+    if(result!==null)return{size,cover:result};
+  }
+  return{size:n,cover:nodes};
+}
+
+function findCoverOfSize(n,size,edgeBits,nodes){
+  // enumerate all C(n,size) subsets using Gosper's hack
+  if(size===0){
+    // check if graph has no edges
+    return edgeBits.length===0?[]:null;
+  }
+  if(size>n)return null;
+  let mask=(1<<size)-1; // lowest 'size' bits set
+  const limit=1<<n;
+  while(mask<limit){
+    // check if this subset covers all edges
+    let covers=true;
+    for(const [u,v] of edgeBits){
+      if(!((mask>>u)&1)&&!((mask>>v)&1)){covers=false;break}
+    }
+    if(covers){
+      // collect vertex names in this mask
+      const cover=[];
+      for(let i=0;i<n;i++)if((mask>>i)&1)cover.push(nodes[i]);
+      return cover;
+    }
+    // Gosper's hack: next permutation of same popcount
+    const c=mask&(-mask);
+    const r=mask+c;
+    mask=(((r^mask)>>2)/c)|r;
+  }
+  return null;
+}
+
+// ─── RENDER OPT PANEL ─────────────────────────────────────────────────────────
+function renderOptPanel(){
+  const ex=state.extra;
+  const el=$('opt-panel');
+  if(!ex||!ex.nodes||!ex.edges){
+    el.innerHTML='<div class="note">Run the algorithm to see the exact OPT comparison.</div>';
+    return;
+  }
+  if(ex.nodes.length>20){
+    el.innerHTML='<div class="note">Graph too large for brute-force OPT (> 20 vertices). OPT lower bound = |M| = '+ex.optLB+'.</div>';
+    return;
+  }
+  const opt=computeExactOPT(ex.nodes,ex.edges);
+  if(!opt){el.innerHTML='<div class="note err">OPT solver failed.</div>';return;}
+  const approxSz=ex.coverSz;
+  const optSz=opt.size;
+  const ratio=optSz>0?(approxSz/optSz).toFixed(2):'1.00';
+  const ratioNum=optSz>0?approxSz/optSz:1;
+
+  let verdictClass,verdictMsg;
+  if(ratioNum<=1.01){
+    verdictClass='exact';
+    verdictMsg='<b>Optimal!</b> The approximation found the exact minimum cover — ratio = 1.0. This happens when the matching M already forces all cover vertices to be necessary.';
+  } else if(ratioNum<2.0){
+    verdictClass='good';
+    verdictMsg='<b>Better than worst-case.</b> The algorithm found a cover smaller than 2·OPT. The 2-approximation bound is an upper bound — the actual ratio can often be much lower.';
+  } else {
+    verdictClass='tight';
+    verdictMsg='<b>Tight bound.</b> The algorithm hit exactly 2·OPT — the worst-case ratio. This proves the 2-approximation analysis is tight and cannot be improved in general.';
+  }
+
+  el.innerHTML=`
+<table class="opt-table">
+  <thead><tr><th>Metric</th><th>Value</th><th>Cover Set</th></tr></thead>
+  <tbody>
+    <tr class="row-approx"><td>Approx Cover |C|</td><td>${approxSz}</td><td>{${ex.approxCover.join(', ')}}</td></tr>
+    <tr class="row-opt"><td>Optimal OPT</td><td>${optSz}</td><td>{${opt.cover.join(', ')}}</td></tr>
+    <tr class="row-ratio"><td>Ratio |C| / OPT</td><td colspan="2">${ratio} &nbsp;(bound: ≤ 2.0) ${ratioNum<=2.0?'✓':'✗'}</td></tr>
+  </tbody>
+</table>
+<div class="opt-verdict ${verdictClass}">${verdictMsg}</div>`;
+}
+
+// init pseudocode
+$('pseudo').innerHTML=PSEUDO.map((x,i)=>`<div class="pline" data-line="${i+1}" title="${esc(x[1])}"><span class="ln">${i+1}</span><code>${esc(x[0])}</code></div>`).join('');
+buildSteps();
+</script>
+</body>
+</html>
